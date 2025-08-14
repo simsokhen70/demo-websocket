@@ -121,6 +121,65 @@
             word-break: break-all;
             margin-top: 10px;
         }
+        
+        .error {
+            border-left-color: #dc3545 !important;
+            background-color: #f8d7da !important;
+        }
+        
+        .error h4 {
+            color: #721c24;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            max-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .notification.success {
+            background-color: #28a745;
+        }
+        
+        .notification.error {
+            background-color: #dc3545;
+        }
+        
+        .notification.info {
+            background-color: #17a2b8;
+        }
+        
+        .notification.warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .reconnect-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -146,9 +205,13 @@
     <div class="card">
         <h2>WebSocket Status</h2>
         <div id="ws-status" class="status disconnected">Disconnected</div>
+        <div id="reconnect-info" class="reconnect-info" style="display: none;">
+            <strong>Reconnection Status:</strong> <span id="reconnect-status">Not attempting</span>
+        </div>
         <div class="controls">
             <button onclick="connect()" id="connect-btn">Connect</button>
             <button onclick="disconnect()" id="disconnect-btn" disabled>Disconnect</button>
+            <button onclick="cancelReconnect()" id="cancel-reconnect-btn" disabled>Cancel Reconnect</button>
         </div>
     </div>
 
@@ -177,70 +240,13 @@
     <script>
         let stompClient = null;
         let token = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+        let reconnectDelay = 1000; // Start with 1 second
+        let reconnectTimer = null;
+        let isReconnecting = false;
 
-        // Authentication functions
-        async function register() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const response = await fetch('http://localhost:8080/api/auth/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password,
-                        email: username + '@example.com',
-                        firstName: 'Demo',
-                        lastName: 'User'
-                    })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    token = data.token;
-                    displayToken();
-                    alert('Registration successful!');
-                } else {
-                    const error = await response.json();
-                    alert('Registration failed: ' + error.message);
-                }
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        }
 
-        async function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const response = await fetch('http://localhost:8080/api/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    token = data.token;
-                    displayToken();
-                    alert('Login successful!');
-                } else {
-                    const error = await response.json();
-                    alert('Login failed: ' + error.message);
-                }
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        }
 
         function displayToken() {
             const tokenDisplay = document.getElementById('token-display');
@@ -250,6 +256,11 @@
 
         // WebSocket functions
         function connect() {
+            if (isReconnecting) {
+                console.log('Already attempting to reconnect...');
+                return;
+            }
+            
             const socket = new SockJS('http://localhost:8080/ws');
             stompClient = Stomp.over(socket);
             
@@ -260,44 +271,102 @@
             
             stompClient.connect(headers, function (frame) {
                 setConnected(true);
+                reconnectAttempts = 0; // Reset on successful connection
+                reconnectDelay = 1000; // Reset delay
+                isReconnecting = false;
                 console.log('Connected: ' + frame);
                 console.log('User token:', token ? 'Present' : 'Missing');
+                
+                // Show success message
+                showNotification('WebSocket connected successfully', 'success');
             }, function (error) {
-                console.log('Error: ' + error);
+                console.log('WebSocket connection error: ' + error);
                 setConnected(false);
+                isReconnecting = false;
+                
+                // Show error message
+                showNotification('WebSocket connection failed: ' + error, 'error');
+                
+                // Attempt reconnection if we have a token
+                if (token && reconnectAttempts < maxReconnectAttempts) {
+                    attemptReconnect();
+                }
             });
+        }
+        
+        function attemptReconnect() {
+            if (isReconnecting || reconnectAttempts >= maxReconnectAttempts) {
+                return;
+            }
+            
+            isReconnecting = true;
+            reconnectAttempts++;
+            
+            console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts}) in ${reconnectDelay}ms`);
+            showNotification(`Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`, 'info');
+            
+            reconnectTimer = setTimeout(() => {
+                connect();
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000); // Exponential backoff, max 30s
+            }, reconnectDelay);
+        }
+        
+        function cancelReconnect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            isReconnecting = false;
+            reconnectAttempts = 0;
+            reconnectDelay = 1000;
         }
 
         function disconnect() {
+            cancelReconnect(); // Cancel any pending reconnection attempts
+            
             if (stompClient !== null) {
                 stompClient.disconnect();
             }
             setConnected(false);
+            showNotification('WebSocket disconnected', 'info');
         }
 
         function setConnected(connected) {
             const statusDiv = document.getElementById('ws-status');
             const connectBtn = document.getElementById('connect-btn');
             const disconnectBtn = document.getElementById('disconnect-btn');
+            const cancelReconnectBtn = document.getElementById('cancel-reconnect-btn');
             const subscribeRatesBtn = document.getElementById('subscribe-rates-btn');
             const subscribePromotionsBtn = document.getElementById('subscribe-promotions-btn');
+            const reconnectInfo = document.getElementById('reconnect-info');
+            const reconnectStatus = document.getElementById('reconnect-status');
             
             if (connected) {
                 statusDiv.textContent = 'Connected';
                 statusDiv.className = 'status connected';
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
+                cancelReconnectBtn.disabled = true;
                 subscribeRatesBtn.disabled = false;
                 subscribePromotionsBtn.disabled = false;
+                reconnectInfo.style.display = 'none';
             } else {
                 statusDiv.textContent = 'Disconnected';
                 statusDiv.className = 'status disconnected';
                 connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
+                cancelReconnectBtn.disabled = false;
                 subscribeRatesBtn.disabled = true;
                 subscribePromotionsBtn.disabled = true;
                 document.getElementById('unsubscribe-rates-btn').disabled = true;
                 document.getElementById('unsubscribe-promotions-btn').disabled = true;
+                
+                if (isReconnecting) {
+                    reconnectInfo.style.display = 'block';
+                    reconnectStatus.textContent = `Attempting ${reconnectAttempts}/${maxReconnectAttempts} in ${reconnectDelay}ms`;
+                } else {
+                    reconnectInfo.style.display = 'none';
+                }
             }
         }
 
@@ -388,9 +457,14 @@
             
             if (data.type === 'PROMOTIONS_INITIAL' && Array.isArray(data.data)) {
                 container.innerHTML = '';
+                if (data.data.length === 0) {
+                    container.innerHTML = '<div class="data-item"><p>No promotions available</p></div>';
+                    return;
+                }
                 data.data.forEach(promotion => {
                     const div = document.createElement('div');
                     div.className = 'data-item promotion';
+                    div.setAttribute('data-promotion-id', promotion.id);
                     div.innerHTML = `
                         <h4>${promotion.title}</h4>
                         <p>${promotion.description || 'No description'}</p>
@@ -399,6 +473,7 @@
                     `;
                     container.appendChild(div);
                 });
+                showNotification(`Loaded ${data.data.length} promotions`, 'success');
             } else if (data.type === 'PROMOTION_UPDATE' && data.data) {
                 // Handle individual promotion updates
                 const promotion = data.data;
@@ -423,6 +498,135 @@
                     `;
                     container.appendChild(div);
                 }
+                showNotification('Promotion updated', 'info');
+            } else if (data.type === 'ERROR' && data.data) {
+                // Handle error responses
+                const error = data.data;
+                container.innerHTML = `
+                    <div class="data-item error">
+                        <h4>Error: ${error.error}</h4>
+                        <p>${error.message}</p>
+                        <p><strong>Suggestion:</strong> ${error.suggestion}</p>
+                        <p><small>Trace ID: ${error.traceId}</small></p>
+                    </div>
+                `;
+                showNotification(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+        
+        // Enhanced error handling for API calls
+        async function handleApiError(response, operation) {
+            try {
+                const errorData = await response.json();
+                let errorMessage = `Failed to ${operation}`;
+                
+                if (errorData.data && errorData.data.message) {
+                    errorMessage = errorData.data.message;
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+                
+                showNotification(`${errorMessage} (Trace ID: ${errorData.data?.traceId || 'N/A'})`, 'error');
+                return false;
+            } catch (e) {
+                showNotification(`Failed to ${operation}: ${response.statusText}`, 'error');
+                return false;
+            }
+        }
+        
+        // Enhanced authentication functions with better error handling
+        async function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showNotification('Please enter both username and password', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        email: username + '@example.com',
+                        firstName: 'Demo',
+                        lastName: 'User'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        token = data.data.token;
+                        displayToken();
+                        showNotification('Registration successful!', 'success');
+                    } else {
+                        showNotification('Registration failed: Invalid response format', 'error');
+                    }
+                } else {
+                    await handleApiError(response, 'register');
+                }
+            } catch (error) {
+                showNotification('Network error during registration: ' + error.message, 'error');
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showNotification('Please enter both username and password', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        token = data.data.token;
+                        displayToken();
+                        showNotification('Login successful!', 'success');
+                    } else {
+                        showNotification('Login failed: Invalid response format', 'error');
+                    }
+                } else {
+                    await handleApiError(response, 'login');
+                }
+            } catch (error) {
+                showNotification('Network error during login: ' + error.message, 'error');
             }
         }
     </script>

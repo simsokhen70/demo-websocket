@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.demows.dto.ApiResponse;
 import org.example.demows.dto.AuthResponse;
 import org.example.demows.dto.UserLoginRequest;
 import org.example.demows.dto.UserRegistrationRequest;
@@ -26,17 +27,17 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new user account and returns authentication token")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody UserRegistrationRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody UserRegistrationRequest request) {
         log.info("Registration request received for username: {}", request.getUsername());
         AuthResponse response = authService.register(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "User registered successfully"));
     }
 
     @PostMapping("/login")
     @Operation(summary = "User login", description = "Authenticates user and returns JWT token")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody UserLoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody UserLoginRequest request) {
         log.info("Login request received for username: {}", request.getUsername());
         AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
     }
 }

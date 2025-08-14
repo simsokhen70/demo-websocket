@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.demows.dto.ExchangeRateDto;
 import org.example.demows.dto.PromotionDto;
+import org.example.demows.dto.WebSocketErrorResponse;
 import org.example.demows.dto.WebSocketMessage;
 import org.example.demows.service.ExchangeRateService;
 import org.example.demows.service.PromotionService;
@@ -44,30 +45,51 @@ public class WebSocketController {
 
     @MessageMapping("/promotions/subscribe")
     @SendToUser("/queue/promotions")
-    public WebSocketMessage<List<PromotionDto>> subscribeToPromotions(SimpMessageHeaderAccessor headerAccessor) {
-        log.info("Promotion subscription request received");
-        log.info("HeaderAccessor user: {}", headerAccessor.getUser());
-        log.info("HeaderAccessor sessionId: {}", headerAccessor.getSessionId());
+    public WebSocketMessage<?> subscribeToPromotions(SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        log.info("Promotion subscription request received [SessionId: {}]", sessionId);
         
-        String username = "anonymous";
-        if (headerAccessor.getUser() != null) {
-            username = headerAccessor.getUser().getName();
-            log.info("User {} subscribed to promotions", username);
-        } else {
-            log.warn("Anonymous user attempted to subscribe to promotions");
+        try {
+            String username = "anonymous";
+            if (headerAccessor.getUser() != null) {
+                username = headerAccessor.getUser().getName();
+                log.info("User {} subscribed to promotions [SessionId: {}]", username, sessionId);
+            } else {
+                log.warn("Anonymous user attempted to subscribe to promotions [SessionId: {}]", sessionId);
+                // Send error response for anonymous users
+                WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
+                return WebSocketMessage.builder()
+                        .type("ERROR")
+                        .data(errorResponse)
+                        .timestamp(LocalDateTime.now().toString())
+                        .build();
+            }
+            
+            List<PromotionDto> promotions = promotionService.getUserPromotions(username);
+            log.info("Found {} promotions for user {} [SessionId: {}]", promotions.size(), username, sessionId);
+            
+            WebSocketMessage<List<PromotionDto>> response = WebSocketMessage.<List<PromotionDto>>builder()
+                    .type("PROMOTIONS_INITIAL")
+                    .data(promotions)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+            
+            log.info("Sending promotions response for user {} [SessionId: {}]", username, sessionId);
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error processing promotion subscription [SessionId: {}]: {}", sessionId, e.getMessage(), e);
+            WebSocketErrorResponse errorResponse = WebSocketErrorResponse.subscriptionError(
+                sessionId, 
+                headerAccessor.getUser() != null ? headerAccessor.getUser().getName() : "anonymous",
+                "Failed to load promotions: " + e.getMessage()
+            );
+            return WebSocketMessage.builder()
+                    .type("ERROR")
+                    .data(errorResponse)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
         }
-        
-        List<PromotionDto> promotions = promotionService.getUserPromotions(username);
-        log.info("Found {} promotions for user {}", promotions.size(), username);
-        
-        WebSocketMessage<List<PromotionDto>> response = WebSocketMessage.<List<PromotionDto>>builder()
-                .type("PROMOTIONS_INITIAL")
-                .data(promotions)
-                .timestamp(LocalDateTime.now().toString())
-                .build();
-        
-        log.info("Sending promotions response: {}", response);
-        return response;
     }
 
     @MessageMapping("/exchange-rates/request")
