@@ -41,12 +41,22 @@ public class PromotionService {
 
     public List<PromotionDto> getUserPromotions(String username) {
         log.info("Fetching promotions for user: {}", username);
-        User user = (User) userService.loadUserByUsername(username);
         
-        return promotionRepository.findActivePromotionsForUser(user.getId(), LocalDateTime.now())
-                .stream()
-                .map(this::mapToDto)
-                .toList();
+        if ("anonymous".equals(username)) {
+            log.warn("Anonymous user requested promotions - returning empty list");
+            return List.of();
+        }
+        
+        try {
+            User user = (User) userService.loadUserByUsername(username);
+            return promotionRepository.findActivePromotionsForUser(user.getId(), LocalDateTime.now())
+                    .stream()
+                    .map(this::mapToDto)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Error fetching promotions for user {}: {}", username, e.getMessage());
+            return List.of();
+        }
     }
 
     public List<PromotionDto> getAllActivePromotions() {

@@ -45,16 +45,29 @@ public class WebSocketController {
     @MessageMapping("/promotions/subscribe")
     @SendToUser("/queue/promotions")
     public WebSocketMessage<List<PromotionDto>> subscribeToPromotions(SimpMessageHeaderAccessor headerAccessor) {
-        String username = headerAccessor.getUser() != null ? headerAccessor.getUser().getName() : "anonymous";
-        log.info("User {} subscribed to promotions", username);
+        log.info("Promotion subscription request received");
+        log.info("HeaderAccessor user: {}", headerAccessor.getUser());
+        log.info("HeaderAccessor sessionId: {}", headerAccessor.getSessionId());
+        
+        String username = "anonymous";
+        if (headerAccessor.getUser() != null) {
+            username = headerAccessor.getUser().getName();
+            log.info("User {} subscribed to promotions", username);
+        } else {
+            log.warn("Anonymous user attempted to subscribe to promotions");
+        }
         
         List<PromotionDto> promotions = promotionService.getUserPromotions(username);
+        log.info("Found {} promotions for user {}", promotions.size(), username);
         
-        return WebSocketMessage.<List<PromotionDto>>builder()
+        WebSocketMessage<List<PromotionDto>> response = WebSocketMessage.<List<PromotionDto>>builder()
                 .type("PROMOTIONS_INITIAL")
                 .data(promotions)
                 .timestamp(LocalDateTime.now().toString())
                 .build();
+        
+        log.info("Sending promotions response: {}", response);
+        return response;
     }
 
     @MessageMapping("/exchange-rates/request")

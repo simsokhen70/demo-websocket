@@ -79,16 +79,16 @@ public class ExchangeRateService {
      * Scheduled task to simulate real-time exchange rate updates
      * In production, this would call external exchange rate APIs
      */
-    @Scheduled(fixedRate = 30000) // Every 30 seconds
+    @Scheduled(fixedRate = 10000) // Every 10 seconds for more frequent updates
     public void simulateExchangeRateUpdates() {
         log.info("Simulating exchange rate updates");
         
         List<ExchangeRate> allRates = exchangeRateRepository.findAll();
         
         for (ExchangeRate rate : allRates) {
-            // Simulate small random changes (±2%)
+            // Simulate larger random changes (±5%) for more visible updates
             BigDecimal currentRate = rate.getRate();
-            BigDecimal changePercent = BigDecimal.valueOf(random.nextDouble() * 0.04 - 0.02); // -2% to +2%
+            BigDecimal changePercent = BigDecimal.valueOf(random.nextDouble() * 0.10 - 0.05); // -5% to +5%
             BigDecimal newRate = currentRate.multiply(BigDecimal.ONE.add(changePercent))
                     .setScale(6, RoundingMode.HALF_UP);
             

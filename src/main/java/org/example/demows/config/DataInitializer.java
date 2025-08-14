@@ -3,8 +3,10 @@ package org.example.demows.config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.demows.entity.ExchangeRate;
+import org.example.demows.entity.Promotion;
 import org.example.demows.entity.User;
 import org.example.demows.repository.ExchangeRateRepository;
+import org.example.demows.repository.PromotionRepository;
 import org.example.demows.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +26,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final ExchangeRateRepository exchangeRateRepository;
+    private final PromotionRepository promotionRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -35,6 +38,9 @@ public class DataInitializer implements CommandLineRunner {
 
         // Create sample exchange rates
         createSampleExchangeRates();
+
+        // Create sample promotions
+        createSamplePromotions();
 
         log.info("Sample data initialization completed!");
     }
@@ -125,6 +131,40 @@ public class DataInitializer implements CommandLineRunner {
                     usdEur, usdGbp, usdJpy, eurUsd, eurGbp, gbpUsd, gbpEur
             ));
             log.info("Created sample exchange rates");
+        }
+    }
+
+    private void createSamplePromotions() {
+        if (promotionRepository.count() == 0) {
+            // Get demo user
+            User demoUser = userRepository.findByUsername("demo").orElse(null);
+            if (demoUser != null) {
+                Promotion welcomeBonus = Promotion.builder()
+                        .user(demoUser)
+                        .title("Welcome Bonus")
+                        .description("Get 10% off your first purchase")
+                        .discountPercentage(new BigDecimal("10.00"))
+                        .minPurchaseAmount(new BigDecimal("50.00"))
+                        .validFrom(LocalDateTime.now())
+                        .validUntil(LocalDateTime.now().plusMonths(1))
+                        .isActive(true)
+                        .isUsed(false)
+                        .build();
+
+                Promotion referralBonus = Promotion.builder()
+                        .user(demoUser)
+                        .title("Refer a Friend")
+                        .description("Earn $20 when your friend joins")
+                        .discountAmount(new BigDecimal("20.00"))
+                        .validFrom(LocalDateTime.now())
+                        .validUntil(LocalDateTime.now().plusMonths(3))
+                        .isActive(true)
+                        .isUsed(false)
+                        .build();
+
+                promotionRepository.saveAll(Arrays.asList(welcomeBonus, referralBonus));
+                log.info("Created sample promotions for demo user");
+            }
         }
     }
 }

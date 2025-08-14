@@ -184,7 +184,7 @@
             const password = document.getElementById('password').value;
             
             try {
-                const response = await fetch('/api/auth/register', {
+                const response = await fetch('http://localhost:8080/api/auth/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -217,7 +217,7 @@
             const password = document.getElementById('password').value;
             
             try {
-                const response = await fetch('/api/auth/login', {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -250,7 +250,7 @@
 
         // WebSocket functions
         function connect() {
-            const socket = new SockJS('/ws');
+            const socket = new SockJS('http://localhost:8080/ws');
             stompClient = Stomp.over(socket);
             
             const headers = {};
@@ -261,6 +261,7 @@
             stompClient.connect(headers, function (frame) {
                 setConnected(true);
                 console.log('Connected: ' + frame);
+                console.log('User token:', token ? 'Present' : 'Missing');
             }, function (error) {
                 console.log('Error: ' + error);
                 setConnected(false);
@@ -356,6 +357,7 @@
                 data.data.forEach(rate => {
                     const div = document.createElement('div');
                     div.className = 'data-item exchange-rate';
+                    div.setAttribute('data-currency', `${rate.fromCurrency}-${rate.toCurrency}`);
                     div.innerHTML = `
                         <span>${rate.fromCurrency} → ${rate.toCurrency}</span>
                         <span class="rate-value">${rate.rate}</span>
