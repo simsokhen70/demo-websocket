@@ -1,0 +1,57 @@
+package org.example.demows.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.demows.dto.ExchangeRateDto;
+import org.example.demows.dto.PromotionDto;
+import org.example.demows.dto.WebSocketMessage;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
+/**
+ * Kafka consumer service for handling real-time updates
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class KafkaConsumerService {
+
+    private final SimpMessagingTemplate messagingTemplate;
+    private final ObjectMapper objectMapper;
+
+    @KafkaListener(topics = "exchange-rates", groupId = "demo-ws-group")
+    public void consumeExchangeRateUpdates(String message) {
+        try {
+            WebSocketMessage<ExchangeRateDto> webSocketMessage = objectMapper.readValue(message, 
+                    objectMapper.getTypeFactory().constructParametricType(WebSocketMessage.class, ExchangeRateDto.class));
+            
+            log.debug("Received exchange rate update from Kafka: {}", message);
+            
+            // Broadcast to all WebSocket subscribers
+            messagingTemplate.convertAndSend("/topic/exchange-rates", webSocketMessage);
+            
+        } catch (JsonProcessingException e) {
+            log.error("Error processing exchange rate message from Kafka", e);
+        }
+    }
+
+    @KafkaListener(topics = "promotions", groupId = "demo-ws-group")
+    public void consumePromotionUpdates(String message) {
+        try {
+            WebSocketMessage<PromotionDto> webSocketMessage = objectMapper.readValue(message, 
+                    objectMapper.getTypeFactory().constructParametricType(WebSocketMessage.class, PromotionDto.class));
+            
+            log.debug("Received promotion update from Kafka: {}", message);
+            
+            // Note: For promotions, we typically send to specific users
+            // This is handled in the PromotionService directly
+            // Here we just log the message for monitoring purposes
+            
+        } catch (JsonProcessingException e) {
+            log.error("Error processing promotion message from Kafka", e);
+        }
+    }
+}

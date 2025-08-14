@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo WebSocket Application</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .data-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .exchange-rate {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .rate-value {
+            font-weight: bold;
+            color: #28a745;
+        }
+        .promotion {
+            border-left-color: #ffc107;
+        }
+        .promotion h4 {
+            margin: 0 0 5px 0;
+            color: #856404;
+        }
+        .promotion p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .auth-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .token-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Demo WebSocket Application</h1>
+    
+    <!-- Authentication Section -->
+    <div class="auth-section">
+        <h2>Authentication</h2>
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter username">
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter password">
+        </div>
+        <button onclick="register()">Register</button>
+        <button onclick="login()">Login</button>
+        <div id="token-display" class="token-display" style="display: none;"></div>
+    </div>
+
+    <!-- WebSocket Status -->
+    <div class="card">
+        <h2>WebSocket Status</h2>
+        <div id="ws-status" class="status disconnected">Disconnected</div>
+        <div class="controls">
+            <button onclick="connect()" id="connect-btn">Connect</button>
+            <button onclick="disconnect()" id="disconnect-btn" disabled>Disconnect</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Exchange Rates -->
+        <div class="card">
+            <h2>Exchange Rates (Real-time)</h2>
+            <div class="controls">
+                <button onclick="subscribeToExchangeRates()" id="subscribe-rates-btn" disabled>Subscribe</button>
+                <button onclick="unsubscribeFromExchangeRates()" id="unsubscribe-rates-btn" disabled>Unsubscribe</button>
+            </div>
+            <div id="exchange-rates-data"></div>
+        </div>
+
+        <!-- Promotions -->
+        <div class="card">
+            <h2>Promotions (User-specific)</h2>
+            <div class="controls">
+                <button onclick="subscribeToPromotions()" id="subscribe-promotions-btn" disabled>Subscribe</button>
+                <button onclick="unsubscribeFromPromotions()" id="unsubscribe-promotions-btn" disabled>Unsubscribe</button>
+            </div>
+            <div id="promotions-data"></div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let token = null;
+
+        // Authentication functions
+        async function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        email: username + '@example.com',
+                        firstName: 'Demo',
+                        lastName: 'User'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    token = data.token;
+                    displayToken();
+                    alert('Registration successful!');
+                } else {
+                    const error = await response.json();
+                    alert('Registration failed: ' + error.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    token = data.token;
+                    displayToken();
+                    alert('Login successful!');
+                } else {
+                    const error = await response.json();
+                    alert('Login failed: ' + error.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function displayToken() {
+            const tokenDisplay = document.getElementById('token-display');
+            tokenDisplay.style.display = 'block';
+            tokenDisplay.textContent = 'Token: ' + token;
+        }
+
+        // WebSocket functions
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + token;
+            }
+            
+            stompClient.connect(headers, function (frame) {
+                setConnected(true);
+                console.log('Connected: ' + frame);
+            }, function (error) {
+                console.log('Error: ' + error);
+                setConnected(false);
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            setConnected(false);
+        }
+
+        function setConnected(connected) {
+            const statusDiv = document.getElementById('ws-status');
+            const connectBtn = document.getElementById('connect-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+            const subscribeRatesBtn = document.getElementById('subscribe-rates-btn');
+            const subscribePromotionsBtn = document.getElementById('subscribe-promotions-btn');
+            
+            if (connected) {
+                statusDiv.textContent = 'Connected';
+                statusDiv.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                subscribeRatesBtn.disabled = false;
+                subscribePromotionsBtn.disabled = false;
+            } else {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                subscribeRatesBtn.disabled = true;
+                subscribePromotionsBtn.disabled = true;
+                document.getElementById('unsubscribe-rates-btn').disabled = true;
+                document.getElementById('unsubscribe-promotions-btn').disabled = true;
+            }
+        }
+
+        function subscribeToExchangeRates() {
+            if (stompClient) {
+                stompClient.subscribe('/topic/exchange-rates', function (message) {
+                    const data = JSON.parse(message.body);
+                    displayExchangeRates(data);
+                });
+                
+                // Request initial data
+                stompClient.send("/app/exchange-rates/subscribe", {}, {});
+                
+                document.getElementById('subscribe-rates-btn').disabled = true;
+                document.getElementById('unsubscribe-rates-btn').disabled = false;
+            }
+        }
+
+        function unsubscribeFromExchangeRates() {
+            if (stompClient) {
+                stompClient.unsubscribe('/topic/exchange-rates');
+                document.getElementById('exchange-rates-data').innerHTML = '';
+                document.getElementById('subscribe-rates-btn').disabled = false;
+                document.getElementById('unsubscribe-rates-btn').disabled = true;
+            }
+        }
+
+        function subscribeToPromotions() {
+            if (stompClient) {
+                stompClient.subscribe('/user/queue/promotions', function (message) {
+                    const data = JSON.parse(message.body);
+                    displayPromotions(data);
+                });
+                
+                // Request initial data
+                stompClient.send("/app/promotions/subscribe", {}, {});
+                
+                document.getElementById('subscribe-promotions-btn').disabled = true;
+                document.getElementById('unsubscribe-promotions-btn').disabled = false;
+            }
+        }
+
+        function unsubscribeFromPromotions() {
+            if (stompClient) {
+                stompClient.unsubscribe('/user/queue/promotions');
+                document.getElementById('promotions-data').innerHTML = '';
+                document.getElementById('subscribe-promotions-btn').disabled = false;
+                document.getElementById('unsubscribe-promotions-btn').disabled = true;
+            }
+        }
+
+        function displayExchangeRates(data) {
+            const container = document.getElementById('exchange-rates-data');
+            
+            if (data.type === 'EXCHANGE_RATES_INITIAL' && Array.isArray(data.data)) {
+                container.innerHTML = '';
+                data.data.forEach(rate => {
+                    const div = document.createElement('div');
+                    div.className = 'data-item exchange-rate';
+                    div.innerHTML = `
+                        <span>${rate.fromCurrency} → ${rate.toCurrency}</span>
+                        <span class="rate-value">${rate.rate}</span>
+                    `;
+                    container.appendChild(div);
+                });
+            } else if (data.type === 'EXCHANGE_RATE_UPDATE' && data.data) {
+                const rate = data.data;
+                const existingDiv = container.querySelector(`[data-currency="${rate.fromCurrency}-${rate.toCurrency}"]`);
+                
+                if (existingDiv) {
+                    existingDiv.querySelector('.rate-value').textContent = rate.rate;
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'data-item exchange-rate';
+                    div.setAttribute('data-currency', `${rate.fromCurrency}-${rate.toCurrency}`);
+                    div.innerHTML = `
+                        <span>${rate.fromCurrency} → ${rate.toCurrency}</span>
+                        <span class="rate-value">${rate.rate}</span>
+                    `;
+                    container.appendChild(div);
+                }
+            }
+        }
+
+        function displayPromotions(data) {
+            const container = document.getElementById('promotions-data');
+            
+            if (data.type === 'PROMOTIONS_INITIAL' && Array.isArray(data.data)) {
+                container.innerHTML = '';
+                data.data.forEach(promotion => {
+                    const div = document.createElement('div');
+                    div.className = 'data-item promotion';
+                    div.innerHTML = `
+                        <h4>${promotion.title}</h4>
+                        <p>${promotion.description || 'No description'}</p>
+                        <p>Discount: ${promotion.discountPercentage ? promotion.discountPercentage + '%' : promotion.discountAmount}</p>
+                        <p>Valid until: ${new Date(promotion.validUntil).toLocaleDateString()}</p>
+                    `;
+                    container.appendChild(div);
+                });
+            } else if (data.type === 'PROMOTION_UPDATE' && data.data) {
+                // Handle individual promotion updates
+                const promotion = data.data;
+                const existingDiv = container.querySelector(`[data-promotion-id="${promotion.id}"]`);
+                
+                if (existingDiv) {
+                    existingDiv.innerHTML = `
+                        <h4>${promotion.title}</h4>
+                        <p>${promotion.description || 'No description'}</p>
+                        <p>Discount: ${promotion.discountPercentage ? promotion.discountPercentage + '%' : promotion.discountAmount}</p>
+                        <p>Valid until: ${new Date(promotion.validUntil).toLocaleDateString()}</p>
+                    `;
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'data-item promotion';
+                    div.setAttribute('data-promotion-id', promotion.id);
+                    div.innerHTML = `
+                        <h4>${promotion.title}</h4>
+                        <p>${promotion.description || 'No description'}</p>
+                        <p>Discount: ${promotion.discountPercentage ? promotion.discountPercentage + '%' : promotion.discountAmount}</p>
+                        <p>Valid until: ${new Date(promotion.validUntil).toLocaleDateString()}</p>
+                    `;
+                    container.appendChild(div);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
