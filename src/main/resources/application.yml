@@ -38,7 +38,7 @@ server:
 
 # JWT Configuration
 jwt:
-  secret: your-super-secret-jwt-key-that-should-be-at-least-256-bits-long-for-security
+  secret: 7D8F3CFA04C2998E27A5EABF8D1F99C6A2B1C38FBA94E6236F62C4A45B9A9E35A33E84F822EF47C63B5C9F47EDAA6BFC
   expiration: 86400000
 
 # WebSocket Configuration

@@ -3,9 +3,11 @@ package org.example.demows.config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.demows.entity.ExchangeRate;
+import org.example.demows.entity.Notification;
 import org.example.demows.entity.Promotion;
 import org.example.demows.entity.User;
 import org.example.demows.repository.ExchangeRateRepository;
+import org.example.demows.repository.NotificationRepository;
 import org.example.demows.repository.PromotionRepository;
 import org.example.demows.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Data initializer for populating H2 database with sample data
@@ -27,6 +30,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final ExchangeRateRepository exchangeRateRepository;
     private final PromotionRepository promotionRepository;
+    private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -41,6 +45,9 @@ public class DataInitializer implements CommandLineRunner {
 
         // Create sample promotions
         createSamplePromotions();
+
+        // Create sample notification
+        initializeNotifications();
 
         log.info("Sample data initialization completed!");
     }
@@ -167,4 +174,47 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
     }
+
+    public void initializeNotifications() {
+        log.info("Initializing sample notifications...");
+
+        try {
+            User demoUser = userRepository.findByUsername("demo")
+                    .orElseThrow(() -> new RuntimeException("Demo user not found"));
+
+            // Create sample notifications
+            List<Notification> notifications = Arrays.asList(
+                    Notification.builder()
+                            .username(demoUser.getUsername())
+                            .user(demoUser)
+                            .title("Welcome to Demo-WS!")
+                            .message("Thank you for joining our platform. Check out our latest promotions!")
+                            .type("SYSTEM")
+                            .priority("NORMAL")
+                            .isRead(false)
+                            .isActive(true)
+                            .createdAt(LocalDateTime.now().minusHours(2))
+                            .build(),
+
+                    Notification.builder()
+                            .username(demoUser.getUsername())
+                            .user(demoUser)
+                            .title("New Promotion Available")
+                            .message("You have a new 20% discount on all purchases!")
+                            .type("PROMOTION")
+                            .priority("HIGH")
+                            .isRead(false)
+                            .isActive(true)
+                            .createdAt(LocalDateTime.now().minusMinutes(30))
+                            .build()
+            );
+
+            notificationRepository.saveAll(notifications);
+            log.info("Created {} sample notifications", notifications.size());
+
+        } catch (Exception e) {
+            log.error("Error initializing notifications", e);
+        }
+    }
+
 }

@@ -2,20 +2,21 @@ package org.example.demows.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.demows.dto.ExchangeRateDto;
-import org.example.demows.dto.PromotionDto;
-import org.example.demows.dto.WebSocketErrorResponse;
-import org.example.demows.dto.WebSocketMessage;
+import org.example.demows.dto.*;
+import org.example.demows.entity.User;
 import org.example.demows.service.ExchangeRateService;
+import org.example.demows.service.NotificationService;
 import org.example.demows.service.PromotionService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.annotation.SendToUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * WebSocket controller for handling real-time messaging
@@ -27,6 +28,7 @@ public class WebSocketController {
 
     private final ExchangeRateService exchangeRateService;
     private final PromotionService promotionService;
+    private final NotificationService notificationService;
 
     @MessageMapping("/exchange-rates/subscribe")
     @SendTo("/topic/exchange-rates")
@@ -50,7 +52,7 @@ public class WebSocketController {
         log.info("Promotion subscription request received [SessionId: {}]", sessionId);
         
         try {
-            String username = "anonymous";
+            String username = "demo";
             if (headerAccessor.getUser() != null) {
                 username = headerAccessor.getUser().getName();
                 log.info("User {} subscribed to promotions [SessionId: {}]", username, sessionId);
@@ -118,4 +120,87 @@ public class WebSocketController {
                 .timestamp(LocalDateTime.now().toString())
                 .build();
     }
+
+    @MessageMapping("/notifications/subscribe")
+    @SendToUser("/queue/notifications")
+    public WebSocketMessage<?> subscribeToNotifications(
+            SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        log.info("Promotion subscription request received [SessionId: {}]", sessionId);
+
+        String username = "anonymous";
+        try {
+            if (headerAccessor.getUser() != null) {
+                username = headerAccessor.getUser().getName();
+                log.info("User {} subscribed to notification [SessionId: {}]", username, sessionId);
+            } else {
+                log.warn("Anonymous user attempted to subscribe to notification [SessionId: {}]", sessionId);
+                // Send error response for anonymous users
+                WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
+                return WebSocketMessage.builder()
+                        .type("ERROR")
+                        .data(errorResponse)
+                        .timestamp(LocalDateTime.now().toString())
+                        .build();
+            }
+
+            List<NotificationDto> notifications = notificationService
+                    .getUserNotifications(username);
+
+            return WebSocketMessage.builder()
+                    .type("NOTIFICATIONS_INITIAL")
+                    .data(notifications)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+        } catch (Exception e) {
+            log.error("Error subscribing to notifications for user {}", username, e);
+
+            return WebSocketMessage.builder()
+                    .type("ERROR")
+                    .data(WebSocketErrorResponse.builder()
+                            .traceId(UUID.randomUUID().toString())
+                            .type("NOTIFICATION_SUBSCRIPTION_ERROR")
+                            .error("Subscription failed")
+                            .message("Failed to subscribe to notifications")
+                            .suggestion("Please try again or contact support")
+                            .timestamp(LocalDateTime.now())
+                            .sessionId("N/A")
+                            .username(username)
+                            .build())
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+        }
+    }
+    /*public WebSocketMessage<?> subscribeToNotifications(
+            @AuthenticationPrincipal User user) {
+        log.info("User {} subscribed to notifications", user.getUsername());
+
+        try {
+            List<NotificationDto> notifications = notificationService
+                    .getUserNotifications(user.getUsername());
+
+            return WebSocketMessage.builder()
+                    .type("NOTIFICATIONS_INITIAL")
+                    .data(notifications)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+        } catch (Exception e) {
+            log.error("Error subscribing to notifications for user {}", user.getUsername(), e);
+
+            return WebSocketMessage.builder()
+                    .type("ERROR")
+                    .data(WebSocketErrorResponse.builder()
+                            .traceId(UUID.randomUUID().toString())
+                            .type("NOTIFICATION_SUBSCRIPTION_ERROR")
+                            .error("Subscription failed")
+                            .message("Failed to subscribe to notifications")
+                            .suggestion("Please try again or contact support")
+                            .timestamp(LocalDateTime.now())
+                            .sessionId("N/A")
+                            .username(user.getUsername())
+                            .build())
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+        }
+    }*/
 }

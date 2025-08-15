@@ -180,11 +180,96 @@
             border-radius: 4px;
             margin: 10px 0;
         }
+
+        .notification-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .notification-item.unread {
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+
+        .notification-item.read {
+            opacity: 0.7;
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .notification-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .notification-priority {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .notification-priority.high {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .notification-priority.normal {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .notification-priority.low {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .notification-message {
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .notification-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .notification-item button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .notification-item button:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
 <body>
     <h1>Demo WebSocket Application</h1>
-    
+    <div class="section">
+        <h3>Notifications</h3>
+        <button onclick="subscribeToNotifications()" class="btn btn-primary">Subscribe to Notifications</button>
+        <div id="notifications-container" class="notifications-list">
+            <!-- Notifications will be displayed here -->
+        </div>
+    </div>
+
     <!-- Authentication Section -->
     <div class="auth-section">
         <h2>Authentication</h2>
@@ -279,11 +364,12 @@
                 
                 // Show success message
                 showNotification('WebSocket connected successfully', 'success');
+                subscribeToNotifications();
             }, function (error) {
                 console.log('WebSocket connection error: ' + error);
                 setConnected(false);
                 isReconnecting = false;
-                
+
                 // Show error message
                 showNotification('WebSocket connection failed: ' + error, 'error');
                 
@@ -628,6 +714,115 @@
             } catch (error) {
                 showNotification('Network error during login: ' + error.message, 'error');
             }
+        }
+
+        // Subscribe to notifications
+        function subscribeToNotifications() {
+            if (stompClient && stompClient.connected) {
+                stompClient.subscribe('/user/queue/notifications', function(message) {
+                    const notificationMessage = JSON.parse(message.body);
+                    handleNotificationMessage(notificationMessage);
+                });
+
+                // Send subscription request
+                stompClient.send("/app/notifications/subscribe", {}, JSON.stringify({}));
+                showNotification('Subscribed to notifications', 'info');
+            }
+        }
+
+        // Handle notification messages
+        function handleNotificationMessage(message) {
+            console.log('Received notification:', message);
+
+            if (message.type === 'NOTIFICATIONS_INITIAL') {
+                displayNotifications(message.data);
+            } else if (message.type === 'NOTIFICATION_UPDATE') {
+                updateNotification(message.data);
+            } else if (message.type === 'ERROR') {
+                showNotification('Notification error: ' + message.data.message, 'error');
+            }
+        }
+
+        // Display notifications
+        function displayNotifications(notifications) {
+            const container = document.getElementById('notifications-container');
+            container.innerHTML = '';
+
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="notification-item">No notifications available</div>';
+                return;
+            }
+
+            notifications.forEach(notification => {
+                const notificationElement = createNotificationElement(notification);
+                container.appendChild(notificationElement);
+            });
+        }
+
+        function updateNotification(notification) {
+            const container = document.getElementById('notifications-container');
+
+            // Optional: check if notification already exists by ID
+            if (document.getElementById(`notification-${notification.id}`)) {
+                return; // Skip if already added
+            }
+
+            const notificationElement = createNotificationElement(notification);
+            notificationElement.id = `notification-${notification.id}`; // Assign unique ID
+            container.appendChild(notificationElement);
+        }
+
+        // Create notification element
+        function createNotificationElement(notification) {
+            const div = document.createElement('div');
+            div.className = `notification-item ${notification.isRead ? 'read' : 'unread'}`;
+            div.id = `notification-${notification.id}`
+            div.setAttribute('data-notification-id', notification.id);
+
+            div.innerHTML = `
+        <div class="notification-header">
+            <span class="notification-title">${notification.title}</span>
+            <span class="notification-priority ${notification.priority.toLowerCase()}">${notification.priority}</span>
+        </div>
+        <div class="notification-message">${notification.message}</div>
+        <div class="notification-meta">
+            <span class="notification-type">${notification.type}</span>
+            <span class="notification-time">${notification.createdAt}</span>
+        </div>
+        ${!notification.isRead ? '<button onclick="markAsRead(' + notification.id + ')">Mark as Read</button>' : ''}
+    `;
+
+            return div;
+        }
+
+        // Mark notification as read
+        function markAsRead(notificationId) {
+            fetch(`http://localhost:8080/api/notifications/${notificationId}/read`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer ' + getToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Notification marked as read', 'success');
+                        // Update UI
+                        const element = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                        if (element) {
+                            element.classList.remove('unread');
+                            element.classList.add('read');
+                            element.querySelector('button').remove();
+                        }
+                    } else {
+                        showNotification('Error marking as read: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error marking as read', 'error');
+                    console.error('Error:', error);
+                });
         }
     </script>
 </body>

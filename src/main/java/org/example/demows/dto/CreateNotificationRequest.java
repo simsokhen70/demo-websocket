@@ -5,17 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO for authentication response
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
-
-    private String token;
-    @Builder.Default
-    private String type = "Bearer";
-    private UserProfileDto user;
+public class CreateNotificationRequest {
+    private String title;
+    private String message;
+    private String type;
+    private String priority;
 }

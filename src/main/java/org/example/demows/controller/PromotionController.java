@@ -56,6 +56,16 @@ public class PromotionController {
         return ResponseEntity.ok(createdPromotion);
     }
 
+    @PostMapping("/{username}")
+    @Operation(summary = "Create promotion", description = "Creates a new promotion for other user by username")
+    public ResponseEntity<PromotionDto> createPromotionByAdmin(
+            @PathVariable String username,
+            @Valid @RequestBody PromotionDto promotionDto) {
+        log.info("Request to create promotion for user: {}", username);
+        PromotionDto createdPromotion = promotionService.createPromotion(username, promotionDto);
+        return ResponseEntity.ok(createdPromotion);
+    }
+
     @PutMapping("/{promotionId}")
     @Operation(summary = "Update promotion", description = "Updates an existing promotion")
     public ResponseEntity<PromotionDto> updatePromotion(
