@@ -40,24 +40,6 @@ CREATE TABLE promotions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for better performance
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_exchange_rates_currencies ON exchange_rates(from_currency, to_currency);
-CREATE INDEX idx_promotions_user_id ON promotions(user_id);
-CREATE INDEX idx_promotions_valid_dates ON promotions(valid_from, valid_until);
-CREATE INDEX idx_promotions_active ON promotions(is_active);
-
--- Insert initial exchange rates data
-INSERT INTO exchange_rates (from_currency, to_currency, rate) VALUES
-('USD', 'EUR', 0.85),
-('USD', 'GBP', 0.73),
-('USD', 'JPY', 110.50),
-('EUR', 'USD', 1.18),
-('EUR', 'GBP', 0.86),
-('GBP', 'USD', 1.37),
-('GBP', 'EUR', 1.16);
-
 -- Create notifications table
 CREATE TABLE notifications (
       id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -71,3 +53,41 @@ CREATE TABLE notifications (
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       read_at TIMESTAMP NULL                      -- When user read it
 );
+
+-- Create chat_messages table
+CREATE TABLE chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    sender_username VARCHAR(50) NOT NULL,         -- Who sent the message
+    receiver_username VARCHAR(50) NOT NULL,       -- Who receives the message
+    message TEXT NOT NULL,                        -- The actual message content
+    message_type VARCHAR(20) DEFAULT 'TEXT',      -- TEXT, IMAGE, FILE, SYSTEM
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When message was sent
+    is_read BOOLEAN DEFAULT FALSE,                -- Has receiver read it?
+    read_at TIMESTAMP NULL,                       -- When receiver read it
+    is_deleted BOOLEAN DEFAULT FALSE              -- Soft delete flag
+);
+
+-- Create indexes for better performance
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_exchange_rates_currencies ON exchange_rates(from_currency, to_currency);
+CREATE INDEX idx_promotions_user_id ON promotions(user_id);
+CREATE INDEX idx_promotions_valid_dates ON promotions(valid_from, valid_until);
+CREATE INDEX idx_promotions_active ON promotions(is_active);
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_read ON notifications(is_read);
+CREATE INDEX idx_chat_messages_sender ON chat_messages(sender_username);
+CREATE INDEX idx_chat_messages_receiver ON chat_messages(receiver_username);
+CREATE INDEX idx_chat_messages_conversation ON chat_messages(sender_username, receiver_username);
+CREATE INDEX idx_chat_messages_timestamp ON chat_messages(timestamp);
+CREATE INDEX idx_chat_messages_read ON chat_messages(is_read);
+
+-- Insert initial exchange rates data
+INSERT INTO exchange_rates (from_currency, to_currency, rate) VALUES
+('USD', 'EUR', 0.85),
+('USD', 'GBP', 0.73),
+('USD', 'JPY', 110.50),
+('EUR', 'USD', 1.18),
+('EUR', 'GBP', 0.86),
+('GBP', 'USD', 1.37),
+('GBP', 'EUR', 1.16);

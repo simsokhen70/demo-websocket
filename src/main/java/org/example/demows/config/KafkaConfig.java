@@ -40,6 +40,19 @@ public class KafkaConfig {
     }
 
     @Bean
+    public NewTopic notificationsTopic() {
+        return TopicBuilder.name("notifications")
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic chatTopic() {
+        return TopicBuilder.name("chat-messages").build();
+    }
+
+    @Bean
     public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

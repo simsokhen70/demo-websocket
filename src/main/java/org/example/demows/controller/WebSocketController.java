@@ -7,6 +7,7 @@ import org.example.demows.entity.User;
 import org.example.demows.service.ExchangeRateService;
 import org.example.demows.service.NotificationService;
 import org.example.demows.service.PromotionService;
+import org.example.demows.service.ChatService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
@@ -29,6 +30,7 @@ public class WebSocketController {
     private final ExchangeRateService exchangeRateService;
     private final PromotionService promotionService;
     private final NotificationService notificationService;
+    private final ChatService chatService;
 
     @MessageMapping("/exchange-rates/subscribe")
     @SendTo("/topic/exchange-rates")
@@ -167,6 +169,138 @@ public class WebSocketController {
                             .sessionId("N/A")
                             .username(username)
                             .build())
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+        }
+    }
+
+    @MessageMapping("/chat/subscribe")
+    @SendToUser("/queue/chat")
+    public WebSocketMessage<?> subscribeToChat(SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        log.info("Chat subscription request received [SessionId: {}]", sessionId);
+
+        String username = "anonymous";
+        try {
+            if (headerAccessor.getUser() != null) {
+                username = headerAccessor.getUser().getName();
+                log.info("User {} subscribed to chat [SessionId: {}]", username, sessionId);
+            } else {
+                log.warn("Anonymous user attempted to subscribe to chat [SessionId: {}]", sessionId);
+                WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
+                return WebSocketMessage.builder()
+                        .type("ERROR")
+                        .data(errorResponse)
+                        .timestamp(LocalDateTime.now().toString())
+                        .build();
+            }
+
+            List<ChatMessageDto> conversations = chatService.getUserChats(username);
+
+            return WebSocketMessage.builder()
+                    .type("CHAT_CONVERSATIONS_INITIAL")
+                    .data(conversations)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error subscribing to chat for user {} [SessionId: {}]: {}", username, sessionId, e.getMessage(), e);
+            WebSocketErrorResponse errorResponse = WebSocketErrorResponse.subscriptionError(
+                sessionId, 
+                username,
+                "Failed to load chat conversations: " + e.getMessage()
+            );
+            return WebSocketMessage.builder()
+                    .type("ERROR")
+                    .data(errorResponse)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+        }
+    }
+
+    @MessageMapping("/chat/send")
+    @SendToUser("/queue/chat")
+    public WebSocketMessage<?> sendMessage(ChatRequestDto request, SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        log.info("Chat message request received [SessionId: {}]", sessionId);
+
+        String username = "anonymous";
+        try {
+            if (headerAccessor.getUser() != null) {
+                username = headerAccessor.getUser().getName();
+                log.info("User {} sending message to {} [SessionId: {}]", username, request.getReceiverUsername(), sessionId);
+            } else {
+                log.warn("Anonymous user attempted to send message [SessionId: {}]", sessionId);
+                WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
+                return WebSocketMessage.builder()
+                        .type("ERROR")
+                        .data(errorResponse)
+                        .timestamp(LocalDateTime.now().toString())
+                        .build();
+            }
+
+            ChatMessageDto sentMessage = chatService.sendMessage(username, request);
+
+            return WebSocketMessage.builder()
+                    .type("CHAT_MESSAGE_SENT")
+                    .data(sentMessage)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error sending chat message for user {} [SessionId: {}]: {}", username, sessionId, e.getMessage(), e);
+            WebSocketErrorResponse errorResponse = WebSocketErrorResponse.subscriptionError(
+                sessionId, 
+                username,
+                "Failed to send message: " + e.getMessage()
+            );
+            return WebSocketMessage.builder()
+                    .type("ERROR")
+                    .data(errorResponse)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+        }
+    }
+
+    @MessageMapping("/chat/conversation/{otherUsername}")
+    @SendToUser("/queue/chat")
+    public WebSocketMessage<?> getConversation(String otherUsername, SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        log.info("Chat conversation request received for {} [SessionId: {}]", otherUsername, sessionId);
+
+        String username = "anonymous";
+        try {
+            if (headerAccessor.getUser() != null) {
+                username = headerAccessor.getUser().getName();
+                log.info("User {} requesting conversation with {} [SessionId: {}]", username, otherUsername, sessionId);
+            } else {
+                log.warn("Anonymous user attempted to get conversation [SessionId: {}]", sessionId);
+                WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
+                return WebSocketMessage.builder()
+                        .type("ERROR")
+                        .data(errorResponse)
+                        .timestamp(LocalDateTime.now().toString())
+                        .build();
+            }
+
+            List<ChatMessageDto> conversation = chatService.getConversation(username, otherUsername);
+
+            return WebSocketMessage.builder()
+                    .type("CHAT_CONVERSATION_LOADED")
+                    .data(conversation)
+                    .timestamp(LocalDateTime.now().toString())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error loading conversation for user {} with {} [SessionId: {}]: {}", username, otherUsername, sessionId, e.getMessage(), e);
+            WebSocketErrorResponse errorResponse = WebSocketErrorResponse.subscriptionError(
+                sessionId, 
+                username,
+                "Failed to load conversation: " + e.getMessage()
+            );
+            return WebSocketMessage.builder()
+                    .type("ERROR")
+                    .data(errorResponse)
                     .timestamp(LocalDateTime.now().toString())
                     .build();
         }

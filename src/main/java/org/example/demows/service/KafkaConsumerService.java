@@ -12,6 +12,7 @@ import org.example.demows.dto.WebSocketMessage;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.example.demows.dto.ChatMessageDto;
 
 /**
  * Kafka consumer service for handling real-time updates
@@ -75,6 +76,31 @@ public class KafkaConsumerService {
             log.debug("Forwarded notification to user {}: {}", username, message);
         } catch (Exception e) {
             log.error("Error processing notification message", e);
+        }
+    }
+
+    @KafkaListener(topics = "chat-messages", groupId = "chat-group")
+    public void handleChatMessage(String message) {
+        try {
+            log.debug("Received chat message from Kafka: {}", message);
+
+            // Note: ChatServiceImpl already sends messages directly to WebSocket
+            // This consumer is mainly for monitoring and future features
+            // We don't need to forward the message again to avoid duplicates
+            
+            WebSocketMessage<ChatMessageDto> chatMessage = objectMapper
+                    .readValue(message, new TypeReference<WebSocketMessage<ChatMessageDto>>() {});
+
+            ChatMessageDto chatData = chatMessage.getData();
+            
+            log.debug("Chat message processed from Kafka: {} -> {}", 
+                chatData.getSenderUsername(), chatData.getReceiverUsername());
+            
+            // No need to send to WebSocket again - ChatServiceImpl handles this
+            // This prevents duplicate messages
+            
+        } catch (Exception e) {
+            log.error("Error processing chat message from Kafka", e);
         }
     }
 }
