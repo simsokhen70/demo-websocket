@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.demows.dto.ChatMessageDto;
 import org.example.demows.dto.ChatRequestDto;
 import org.example.demows.dto.WebSocketMessage;
+import org.example.demows.dto.WebSocketMessageType;
 import org.example.demows.entity.ChatMessage;
 import org.example.demows.exception.ResourceNotFoundException;
 import org.example.demows.repository.ChatMessageRepository;
@@ -138,7 +139,7 @@ public class ChatServiceImpl implements ChatService {
     private void publishChatMessage(ChatMessageDto chatMessageDto) {
         try {
             WebSocketMessage<ChatMessageDto> message = WebSocketMessage.<ChatMessageDto>builder()
-                    .type("CHAT_MESSAGE")
+                    .type(WebSocketMessageType.CHAT_MESSAGE.name())
                     .data(chatMessageDto)
                     .timestamp(LocalDateTime.now().toString())
                     .build();

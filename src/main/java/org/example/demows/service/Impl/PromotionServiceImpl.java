@@ -3,6 +3,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.example.demows.dto.PromotionDto;
+import org.example.demows.dto.WebSocketMessageType;
 import org.example.demows.dto.WebSocketMessage;
 import org.example.demows.entity.Promotion;
 import org.example.demows.entity.User;
@@ -173,7 +174,7 @@ public class PromotionServiceImpl implements PromotionService {
     private void publishPromotionUpdate(PromotionDto promotionDto, String username) {
         try {
             WebSocketMessage<PromotionDto> message = WebSocketMessage.<PromotionDto>builder()
-                    .type("PROMOTION_UPDATE")
+                    .type(WebSocketMessageType.PROMOTION_UPDATE.name())
                     .data(promotionDto)
                     .timestamp(LocalDateTime.now().toString())
                     .build();

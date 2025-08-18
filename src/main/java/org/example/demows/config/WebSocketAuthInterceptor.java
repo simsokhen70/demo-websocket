@@ -50,6 +50,10 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 log.info("WebSocket user authenticated: {}", username);
             } else {
                 log.warn("WebSocket connection attempt with invalid or missing token");
+                // Reject by clearing user and throwing to stop CONNECT
+                SecurityContextHolder.clearContext();
+                accessor.setUser(null);
+                throw new IllegalArgumentException("Invalid or missing JWT token for WebSocket CONNECT");
             }
         }
         

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.example.demows.dto.ExchangeRateDto;
+import org.example.demows.dto.WebSocketMessageType;
 import org.example.demows.dto.WebSocketMessage;
 import org.example.demows.entity.ExchangeRate;
 import org.example.demows.exception.ResourceNotFoundException;
@@ -104,7 +105,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     private void publishExchangeRateUpdate(ExchangeRateDto exchangeRateDto) {
         try {
             WebSocketMessage<ExchangeRateDto> message = WebSocketMessage.<ExchangeRateDto>builder()
-                    .type("EXCHANGE_RATE_UPDATE")
+                    .type(WebSocketMessageType.EXCHANGE_RATE_UPDATE.name())
                     .data(exchangeRateDto)
                     .timestamp(LocalDateTime.now().toString())
                     .build();

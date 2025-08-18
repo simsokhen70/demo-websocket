@@ -1,69 +1,43 @@
 spring:
   application:
     name: demo-ws
-  kafka:
-    bootstrap-servers: pkc-921jm.us-east-2.aws.confluent.cloud:9092
-    properties:
-      security.protocol: SASL_SSL
-      sasl.mechanism: PLAIN
-      sasl.jaas.config: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="TFMDAW74HQDVKMBB" password="cfltFnSLKywHDBKqTPTxwLugQQfTjvrfpF6jSi2+AgnXvGbS4+uPemwV2PbVPDNw";'
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    consumer:
-      group-id: demo-ws-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
-  datasource:
-    url: jdbc:postgresql://34.143.160.47:54111/demo-ws
-    username: demo-ws
-    password: demo-ws
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-  flyway:
-    enabled: false
+  # Keep base file lean; override in application-<profile>.yml via env vars
+  profiles:
+    active: dev
 
-
-# Server Configuration
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
-# JWT Configuration
 jwt:
-  secret: 7D8F3CFA04C2998E27A5EABF8D1F99C6A2B1C38FBA94E6236F62C4A45B9A9E35A33E84F822EF47C63B5C9F47EDAA6BFC
-  expiration: 86400000
+  secret: ${JWT_SECRET:CHANGE_ME_DEV_ONLY}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
 
-# WebSocket Configuration
 websocket:
-  allowed-origins: ""
+  allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
 
-# Swagger Configuration
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+  allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+
 springdoc:
   api-docs:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
+  server-url: ${OPENAPI_SERVER_URL:}
 
-# Logging Configuration
 logging:
   level:
-    org.example.demows: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.kafka: DEBUG
-    org.apache.kafka.clients.NetworkClient: DEBUG
-    org.apache.kafka.clients.Metadata: DEBUG
+    org.example.demows: INFO
+    org.springframework: INFO
 
-# Actuator Configuration
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized

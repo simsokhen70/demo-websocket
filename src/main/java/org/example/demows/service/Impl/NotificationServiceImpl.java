@@ -5,6 +5,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.example.demows.dto.CreateNotificationRequest;
 import org.example.demows.dto.NotificationDto;
+import org.example.demows.dto.WebSocketMessageType;
 import org.example.demows.dto.WebSocketMessage;
 import org.example.demows.entity.Notification;
 import org.example.demows.entity.User;
@@ -93,7 +94,7 @@ public class NotificationServiceImpl implements NotificationService {
     public void publishNotificationUpdate(NotificationDto notificationDto, String username){
         try{
             WebSocketMessage<NotificationDto> message = WebSocketMessage.<NotificationDto>builder()
-                    .type("NOTIFICATION_UPDATE")
+                    .type(WebSocketMessageType.NOTIFICATION_UPDATE.name())
                     .data(notificationDto)
                     .timestamp(LocalDateTime.now().toString())
                     .build();

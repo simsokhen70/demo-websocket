@@ -20,12 +20,13 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "bearerAuth";
+        final boolean swaggerEnabled = Boolean.parseBoolean(System.getenv().getOrDefault("SWAGGER_ENABLED", "true"));
         
-        return new OpenAPI()
+        String serverUrl = System.getenv().getOrDefault("OPENAPI_SERVER_URL", "");
+
+        OpenAPI openAPI = new OpenAPI()
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
-                .addServersItem(new Server()
-                        .url("https://demo-websocket-production.up.railway.app")
-                        .description("Production server"))
+                
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
@@ -40,5 +41,12 @@ public class OpenApiConfig {
                         .contact(new Contact()
                                 .name("Demo Team")
                                 .url("https://github.com/simsokhen70/demo-websocket/tree/demo")));
+        if (!serverUrl.isBlank()) {
+            openAPI.addServersItem(new Server().url(serverUrl).description("Configured server"));
+        }
+        if (!swaggerEnabled) {
+            // When disabled, keep OpenAPI bean minimal (no servers), UI paths can be blocked by security config
+        }
+        return openAPI;
     }
 }

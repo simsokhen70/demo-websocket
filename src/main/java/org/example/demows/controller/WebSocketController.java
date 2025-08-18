@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.demows.dto.*;
 import org.example.demows.entity.User;
 import org.example.demows.service.ExchangeRateService;
+import org.example.demows.dto.WebSocketMessageType;
 import org.example.demows.service.NotificationService;
 import org.example.demows.service.PromotionService;
 import org.example.demows.service.ChatService;
@@ -41,7 +42,7 @@ public class WebSocketController {
         List<ExchangeRateDto> exchangeRates = exchangeRateService.getAllExchangeRates();
         
         return WebSocketMessage.<List<ExchangeRateDto>>builder()
-                .type("EXCHANGE_RATES_INITIAL")
+                .type(WebSocketMessageType.EXCHANGE_RATES_INITIAL.name())
                 .data(exchangeRates)
                 .timestamp(LocalDateTime.now().toString())
                 .build();
@@ -73,7 +74,7 @@ public class WebSocketController {
             log.info("Found {} promotions for user {} [SessionId: {}]", promotions.size(), username, sessionId);
             
             WebSocketMessage<List<PromotionDto>> response = WebSocketMessage.<List<PromotionDto>>builder()
-                    .type("PROMOTIONS_INITIAL")
+                    .type(WebSocketMessageType.PROMOTIONS_INITIAL.name())
                     .data(promotions)
                     .timestamp(LocalDateTime.now().toString())
                     .build();
@@ -140,7 +141,7 @@ public class WebSocketController {
                 // Send error response for anonymous users
                 WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
                 return WebSocketMessage.builder()
-                        .type("ERROR")
+                        .type(WebSocketMessageType.ERROR.name())
                         .data(errorResponse)
                         .timestamp(LocalDateTime.now().toString())
                         .build();
@@ -150,7 +151,7 @@ public class WebSocketController {
                     .getUserNotifications(username);
 
             return WebSocketMessage.builder()
-                    .type("NOTIFICATIONS_INITIAL")
+                    .type(WebSocketMessageType.NOTIFICATIONS_INITIAL.name())
                     .data(notifications)
                     .timestamp(LocalDateTime.now().toString())
                     .build();
@@ -189,7 +190,7 @@ public class WebSocketController {
                 log.warn("Anonymous user attempted to subscribe to chat [SessionId: {}]", sessionId);
                 WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
                 return WebSocketMessage.builder()
-                        .type("ERROR")
+                        .type(WebSocketMessageType.ERROR.name())
                         .data(errorResponse)
                         .timestamp(LocalDateTime.now().toString())
                         .build();
@@ -198,7 +199,7 @@ public class WebSocketController {
             List<ChatMessageDto> conversations = chatService.getUserChats(username);
 
             return WebSocketMessage.builder()
-                    .type("CHAT_CONVERSATIONS_INITIAL")
+                    .type(WebSocketMessageType.CHAT_CONVERSATIONS_INITIAL.name())
                     .data(conversations)
                     .timestamp(LocalDateTime.now().toString())
                     .build();
@@ -233,7 +234,7 @@ public class WebSocketController {
                 log.warn("Anonymous user attempted to send message [SessionId: {}]", sessionId);
                 WebSocketErrorResponse errorResponse = WebSocketErrorResponse.authenticationError(sessionId);
                 return WebSocketMessage.builder()
-                        .type("ERROR")
+                        .type(WebSocketMessageType.ERROR.name())
                         .data(errorResponse)
                         .timestamp(LocalDateTime.now().toString())
                         .build();
@@ -242,7 +243,7 @@ public class WebSocketController {
             ChatMessageDto sentMessage = chatService.sendMessage(username, request);
 
             return WebSocketMessage.builder()
-                    .type("CHAT_MESSAGE_SENT")
+                    .type(WebSocketMessageType.CHAT_MESSAGE_SENT.name())
                     .data(sentMessage)
                     .timestamp(LocalDateTime.now().toString())
                     .build();
