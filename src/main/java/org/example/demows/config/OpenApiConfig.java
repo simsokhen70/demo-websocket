@@ -31,14 +31,10 @@ public class OpenApiConfig {
                                         .bearerFormat("JWT")))
                 .info(new Info()
                         .title("Demo WebSocket API")
-                        .description("A comprehensive Spring Boot WebSocket application with real-time features including user management, exchange rates, and promotions.")
+                        .description("A comprehensive Spring Boot WebSocket application with real-time features including user management, exchange rates, chat message, notification and promotions.")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("Demo Team")
-                                .email("demo@example.com")
-                                .url("https://github.com/demo/demo-ws"))
-                        .license(new License()
-                                .name("MIT License")
-                                .url("https://opensource.org/licenses/MIT")));
+                                .url("https://github.com/simsokhen70/demo-websocket/tree/demo")));
     }
 }

@@ -23,6 +23,12 @@ public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("TFMDAW74HQDVKMBB")
+    private String kafkaApiKey;
+
+    @Value("cfltFnSLKywHDBKqTPTxwLugQQfTjvrfpF6jSi2+AgnXvGbS4+uPemwV2PbVPDNw")
+    private String kafkaApiSecret;
+
     @Bean
     public NewTopic exchangeRatesTopic() {
         return TopicBuilder.name("exchange-rates")
@@ -62,6 +68,9 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
         configProps.put(ProducerConfig.LINGER_MS_CONFIG, 1);
         configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
+        configProps.put("security.protocol", "SASL_SSL");
+        configProps.put("sasl.mechanism", "PLAIN");
+        configProps.put("sasl.jaas.config", "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"" + kafkaApiKey + "\" password=\"" + kafkaApiSecret + "\";");
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 

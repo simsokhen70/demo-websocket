@@ -1,36 +1,32 @@
-# Application Configuration
 spring:
   application:
     name: demo-ws
-  datasource:
-    url: jdbc:h2:mem:demo_ws_db
-    username: sa
-    password: 
-    driver-class-name: org.h2.Driver
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
-  flyway:
-    enabled: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: pkc-921jm.us-east-2.aws.confluent.cloud:9092
+    properties:
+      security.protocol: SASL_SSL
+      sasl.mechanism: PLAIN
+      sasl.jaas.config: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="TFMDAW74HQDVKMBB" password="cfltFnSLKywHDBKqTPTxwLugQQfTjvrfpF6jSi2+AgnXvGbS4+uPemwV2PbVPDNw";'
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
       group-id: demo-ws-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  datasource:
+    url: jdbc:postgresql://34.143.160.47:54111/demo-ws
+    username: demo-ws
+    password: demo-ws
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  flyway:
+    enabled: false
+
 
 # Server Configuration
 server:
@@ -43,7 +39,7 @@ jwt:
 
 # WebSocket Configuration
 websocket:
-  allowed-origins: http://localhost:3000,http://localhost:8080
+  allowed-origins: ""
 
 # Swagger Configuration
 springdoc:
@@ -59,6 +55,8 @@ logging:
     org.example.demows: DEBUG
     org.springframework.security: DEBUG
     org.springframework.kafka: DEBUG
+    org.apache.kafka.clients.NetworkClient: DEBUG
+    org.apache.kafka.clients.Metadata: DEBUG
 
 # Actuator Configuration
 management:
