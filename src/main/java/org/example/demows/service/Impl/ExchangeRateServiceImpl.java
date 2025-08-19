@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -68,6 +69,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
         ExchangeRateDto dto = mapToDto(updatedRate);
 
         // Send to Kafka for real-time updates
+        // publishExchangeRateUpdate(dto);
         publishExchangeRateUpdate(dto);
 
         return dto;
@@ -77,16 +79,16 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
      * Scheduled task to simulate real-time exchange rate updates
      * In production, this would call external exchange rate APIs
      */
-    @Scheduled(fixedRate = 10000) // Every 10 seconds for more frequent updates
+    @Scheduled(fixedRate = 5000) // Every 10 seconds
     public void simulateExchangeRateUpdates() {
         log.info("Simulating exchange rate updates");
 
         List<ExchangeRate> allRates = exchangeRateRepository.findAll();
+        List<ExchangeRateDto> updatedDtos = new ArrayList<>();
 
         for (ExchangeRate rate : allRates) {
-            // Simulate larger random changes (±5%) for more visible updates
             BigDecimal currentRate = rate.getRate();
-            BigDecimal changePercent = BigDecimal.valueOf(random.nextDouble() * 0.10 - 0.05); // -5% to +5%
+            BigDecimal changePercent = BigDecimal.valueOf(random.nextDouble() * 0.10 - 0.05);
             BigDecimal newRate = currentRate.multiply(BigDecimal.ONE.add(changePercent))
                     .setScale(6, RoundingMode.HALF_UP);
 
@@ -94,13 +96,35 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             rate.setLastUpdated(LocalDateTime.now());
 
             ExchangeRate updatedRate = exchangeRateRepository.save(rate);
-            ExchangeRateDto dto = mapToDto(updatedRate);
-
-            // Send to Kafka for real-time updates
-            publishExchangeRateUpdate(dto);
+            updatedDtos.add(mapToDto(updatedRate));
         }
+
+        // Wrap the whole batch in one message
+        publishExchangeRateBatch(updatedDtos);
     }
 
+    private void publishExchangeRateBatch(List<ExchangeRateDto> dtos) {
+        try {
+            WebSocketMessage<List<ExchangeRateDto>> message =
+                    WebSocketMessage.<List<ExchangeRateDto>>builder()
+                            .type("EXCHANGE_RATE_UPDATE_BATCH")
+                            .data(dtos)
+                            .timestamp(LocalDateTime.now().toString())
+                            .build();
+
+            String messageJson = objectMapper.writeValueAsString(message);
+
+            // Send to Kafka
+            kafkaTemplate.send(EXCHANGE_RATES_TOPIC, messageJson);
+
+            // Send to WebSocket subscribers
+            messagingTemplate.convertAndSend(EXCHANGE_RATES_WS_TOPIC, message);
+
+            log.debug("Published exchange rate batch update: {}", messageJson);
+        } catch (JsonProcessingException e) {
+            log.error("Error serializing exchange rate batch update", e);
+        }
+    }
     private void publishExchangeRateUpdate(ExchangeRateDto exchangeRateDto) {
         try {
             WebSocketMessage<ExchangeRateDto> message = WebSocketMessage.<ExchangeRateDto>builder()
@@ -122,6 +146,8 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             log.error("Error serializing exchange rate update", e);
         }
     }
+
+
 
     private ExchangeRateDto mapToDto(ExchangeRate exchangeRate) {
         return ExchangeRateDto.builder()
