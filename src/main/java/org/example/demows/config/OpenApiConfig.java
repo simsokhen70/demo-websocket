@@ -24,8 +24,11 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .addServersItem(new Server()
-                        .url("https://demo-websocket-production.up.railway.app")
-                        .description("Production server"))
+                        .url("https://061acfbed824.ngrok-free.app")
+                        .description("Dev server"))
+                .addServersItem(new Server()
+                        .url("http://localhost:8080")
+                        .description("Local server"))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
