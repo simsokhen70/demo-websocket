@@ -24,7 +24,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .addServersItem(new Server()
-                        .url("https://061acfbed824.ngrok-free.app")
+                        .url("https://22387f4671ae.ngrok-free.app")
                         .description("Dev server"))
                 .addServersItem(new Server()
                         .url("http://localhost:8080")
