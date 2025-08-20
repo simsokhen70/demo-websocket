@@ -130,4 +130,10 @@ public class KafkaConsumerService {
             log.error("Error processing chat message from Kafka", e);
         }
     }
+
+    // @KafkaListener(topics = "dbserver1.postgres.public.promotions", groupId = "ws-group")
+    // public void consumePromotion(String message) {
+    //     log.info("Received from Debezium: {}", message);
+    //     // messagingTemplate.convertAndSend("/topic/promotions", message);
+    // }
 }

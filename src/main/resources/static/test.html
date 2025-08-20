@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Chat conversation (STOMP) demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 720px;
+            margin: 2rem auto;
+        }
+
+        pre {
+            background: #f6f6f6;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow: auto;
+        }
+
+        #log {
+            height: 240px;
+            overflow: auto;
+            border: 1px solid #ddd;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        button {
+            padding: .5rem 1rem;
+            margin: .25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>WebSocket STOMP — Request conversation with <code>user2</code></h2>
+
+    <div>
+        <label>Token (static):</label>
+        <input id="token" style="width:100%"
+            value="eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJkZW1vIiwiaWF0IjoxNzU1Njc4MDQ5LCJleHAiOjE3NTYyODI4NDl9.ACYdnKcxHuwDdMI5tOd6lM_K3B1GmUYmhhkNEnysBwREes9spJI3H7lLjPtw81pabSLdeJ9coLCgst-yxhOmGA" />
+    </div>
+
+    <div style="margin-top:1rem;">
+        <button id="btnConnect">Connect</button>
+        <button id="btnDisconnect" disabled>Disconnect</button>
+        <button id="btnRequestConversation" disabled>Request conversation (with user2)</button>
+    </div>
+
+    <h3>Log</h3>
+    <div id="log"></div>
+
+    <h3>Last message payload</h3>
+    <pre id="lastPayload">-</pre>
+
+    <!-- CDN for SockJS and Stomp (classic) -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+    <script>
+        // — CONFIG — adjust this if your server WS endpoint is different
+        const WS_ENDPOINT = 'http://localhost:8080/ws';    // server SockJS endpoint (e.g. /ws)
+        const APP_PREFIX = '/app';    // MessageMapping default prefix (server-side)
+        const OTHER_USERNAME = 'user2';
+
+        let stompClient = null;
+        const logEl = document.getElementById('log');
+        const lastPayloadEl = document.getElementById('lastPayload');
+
+        function log(...args) {
+            const line = document.createElement('div');
+            line.textContent = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function setButtons(connected) {
+            document.getElementById('btnConnect').disabled = connected;
+            document.getElementById('btnDisconnect').disabled = !connected;
+            document.getElementById('btnRequestConversation').disabled = !connected;
+        }
+
+        document.getElementById('btnConnect').addEventListener('click', () => {
+            const token = document.getElementById('token').value.trim();
+            if (!token) {
+                alert('Please paste the JWT token first.');
+                return;
+            }
+
+            // SockJS + STOMP
+            const socket = new SockJS(WS_ENDPOINT);
+            stompClient = Stomp.over(socket);
+
+            // Optional: disable debug logs from stompjs
+            stompClient.debug = null;
+
+            // Put the Authorization header in the CONNECT frame
+            const connectHeaders = {
+                Authorization: 'Bearer ' + token
+            };
+
+            log('Connecting to', WS_ENDPOINT, 'with header Authorization: Bearer <token...>');
+            stompClient.connect(connectHeaders,
+                frame => {
+                    log('STOMP connected. Server frame:', frame);
+                    setButtons(true);
+
+                    // Subscribe to user-specific queue: /user/queue/chat
+                    // Server used @SendToUser("/queue/chat")
+                    stompClient.subscribe('/user/queue/chat', msg => {
+                        log('[RECEIVED] /user/queue/chat ->', msg.body);
+                        lastPayloadEl.textContent = msg.body;
+                    });
+
+                    // (Optional) general topic subscription example:
+                    // stompClient.subscribe('/topic/exchange-rates', msg => console.log(msg));
+
+                },
+                error => {
+                    log('[CONNECT ERROR]', error);
+                    setButtons(false);
+                }
+            );
+        });
+
+        document.getElementById('btnDisconnect').addEventListener('click', () => {
+            if (stompClient && stompClient.connected) {
+                stompClient.disconnect(() => {
+                    log('Disconnected');
+                    setButtons(false);
+                });
+            }
+        });
+
+        document.getElementById('btnRequestConversation').addEventListener('click', () => {
+            if (!stompClient || !stompClient.connected) {
+                alert('Not connected');
+                return;
+            }
+
+            // Build destination matching your @MessageMapping path with path variable
+            // Server mapping: @MessageMapping("/chat/conversation/{otherUsername}")
+            const destination = `${APP_PREFIX}/chat/conversation/${OTHER_USERNAME}`;
+
+            // Payload is optional; server method signature receives only the path variable.
+            // We send an empty JSON body to be safe.
+            const payload = JSON.stringify({});
+
+            log('[SENDING]', destination, payload);
+            stompClient.send(destination, {}, payload);
+
+            // The server will respond to /user/queue/chat because of @SendToUser
+        });
+
+        // Auto-clean old log lines if too long (optional)
+        setInterval(() => {
+            if (logEl.children.length > 200) {
+                while (logEl.children.length > 100) logEl.removeChild(logEl.firstChild);
+            }
+        }, 5000);
+    </script>
+</body>
+
+</html>

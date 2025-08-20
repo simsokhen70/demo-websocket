@@ -35,7 +35,7 @@ server:
 # JWT Configuration
 jwt:
   secret: 7D8F3CFA04C2998E27A5EABF8D1F99C6A2B1C38FBA94E6236F62C4A45B9A9E35A33E84F822EF47C63B5C9F47EDAA6BFC
-  expiration: 86400000
+  expiration: 604800000
 
 # WebSocket Configuration
 websocket:
@@ -55,8 +55,8 @@ logging:
     org.example.demows: DEBUG
     org.springframework.security: DEBUG
     org.springframework.kafka: DEBUG
-    org.apache.kafka.clients.NetworkClient: DEBUG
-    org.apache.kafka.clients.Metadata: DEBUG
+    #org.apache.kafka.clients.NetworkClient: DEBUG
+    #org.apache.kafka.clients.Metadata: DEBUG
 
 # Actuator Configuration
 management:

@@ -14,7 +14,7 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -264,8 +264,10 @@ public class WebSocketController {
 
     @MessageMapping("/chat/conversation/{otherUsername}")
     @SendToUser("/queue/chat")
-    public WebSocketMessage<?> getConversation(String otherUsername, SimpMessageHeaderAccessor headerAccessor) {
+    public WebSocketMessage<?> getConversation(@DestinationVariable String otherUsername, SimpMessageHeaderAccessor headerAccessor) {
         String sessionId = headerAccessor.getSessionId();
+                System.out.println("Chat conversation request received for " + otherUsername + "");
+
         log.info("Chat conversation request received for {} [SessionId: {}]", otherUsername, sessionId);
 
         String username = "anonymous";
