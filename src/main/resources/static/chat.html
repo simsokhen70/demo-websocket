@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,7 +25,7 @@
             display: flex;
             height: 100vh;
             background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         /* Sidebar Styles */
@@ -124,7 +125,8 @@
             gap: 10px;
         }
 
-        .login-form input, .login-form select {
+        .login-form input,
+        .login-form select {
             padding: 10px;
             border: 1px solid #e4e6ea;
             border-radius: 6px;
@@ -151,8 +153,13 @@
             margin-top: 5px;
         }
 
-        .login-status.success { color: #28a745; }
-        .login-status.error { color: #dc3545; }
+        .login-status.success {
+            color: #28a745;
+        }
+
+        .login-status.error {
+            color: #dc3545;
+        }
 
         /* Conversations List */
         .conversations-list {
@@ -311,7 +318,7 @@
             background: white;
             color: #1c1e21;
             border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
         .message-sender {
@@ -416,15 +423,15 @@
                 z-index: 1000;
                 height: 100%;
             }
-            
+
             .chat-main {
                 display: none;
             }
-            
+
             .show-chat .sidebar {
                 display: none;
             }
-            
+
             .show-chat .chat-main {
                 display: flex;
                 width: 100%;
@@ -432,6 +439,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="chat-app">
         <!-- Sidebar -->
@@ -464,11 +472,11 @@
                     </div>
                 </div>
                 <button class="logout-btn" onclick="logout()">Logout</button>
-                
+
                 <!-- Search Conversations -->
                 <div class="search-container">
-                    <input type="text" id="searchConversations" placeholder="Search conversations..." 
-                           onkeyup="filterConversations(this.value)">
+                    <input type="text" id="searchConversations" placeholder="Search conversations..."
+                        onkeyup="filterConversations(this.value)">
                 </div>
             </div>
 
@@ -493,13 +501,13 @@
                     </button>
                 </div>
             </div>
-            
+
             <div class="chat-messages" id="chatMessages">
                 <div class="status-message">
                     Choose a conversation to start chatting
                 </div>
             </div>
-            
+
             <div class="chat-input-container">
                 <div class="chat-input">
                     <input type="text" id="messageInput" placeholder="Type a message..." disabled>
@@ -539,7 +547,7 @@
         function showUserInfo() {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('userInfoSection').classList.remove('hidden');
-            
+
             // Update user avatar and name
             const userAvatar = document.getElementById('userAvatar');
             const currentUserName = document.getElementById('currentUserName');
@@ -565,7 +573,7 @@
             setLoading(true);
             updateLoginStatus('Logging in...', '');
 
-            fetch('http://localhost:8080/api/auth/login', {
+            fetch('http://localhost:8888/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -575,42 +583,42 @@
                     password: password
                 })
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    authToken = data.data.token;
-                    currentUser = username;
-                    
-                    updateLoginStatus('Login successful!', 'success');
-                    showUserInfo();
-                    
-                    // Request notification permission
-                    requestNotificationPermission();
-                    
-                    // Connect to WebSocket
-                    connectWebSocket();
-                    
-                    // Debug: Test REST API after login
-                    setTimeout(() => {
-                        console.log('Testing REST API after login...');
-                        debugRestAPI();
-                    }, 2000);
-                } else {
-                    throw new Error(data.message || 'Login failed');
-                }
-            })
-            .catch(error => {
-                console.error('Login error:', error);
-                updateLoginStatus(`Login failed: ${error.message}`, 'error');
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        authToken = data.data.token;
+                        currentUser = username;
+
+                        updateLoginStatus('Login successful!', 'success');
+                        showUserInfo();
+
+                        // Request notification permission
+                        requestNotificationPermission();
+
+                        // Connect to WebSocket
+                        connectWebSocket();
+
+                        // Debug: Test REST API after login
+                        setTimeout(() => {
+                            console.log('Testing REST API after login...');
+                            debugRestAPI();
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message || 'Login failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Login error:', error);
+                    updateLoginStatus(`Login failed: ${error.message}`, 'error');
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
         }
 
         function requestNotificationPermission() {
@@ -641,7 +649,7 @@
         }
 
         function connectWebSocket() {
-            const socket = new SockJS('http://localhost:8080/ws');
+            const socket = new SockJS('http://localhost:8888/ws');
             stompClient = Stomp.over(socket);
 
             const headers = {
@@ -650,7 +658,7 @@
 
             stompClient.connect(headers, function (frame) {
                 console.log('Connected: ' + frame);
-                
+
                 // Subscribe to chat messages
                 stompClient.subscribe('/user/queue/chat', function (message) {
                     const data = JSON.parse(message.body);
@@ -674,7 +682,7 @@
         function displayConversations(conversationsData) {
             conversations = conversationsData;
             const conversationsList = document.getElementById('conversationsList');
-            
+
             if (conversations.length === 0) {
                 conversationsList.innerHTML = '<div class="no-conversations"><p>No conversations yet. Start chatting!</p></div>';
                 return;
@@ -683,9 +691,9 @@
             // Group conversations by partner and get latest message for each
             const conversationMap = new Map();
             conversations.forEach(conv => {
-                const partner = conv.senderUsername === currentUser ? 
+                const partner = conv.senderUsername === currentUser ?
                     conv.receiverUsername : conv.senderUsername;
-                
+
                 if (!conversationMap.has(partner)) {
                     conversationMap.set(partner, {
                         partner: partner,
@@ -694,15 +702,15 @@
                         messages: []
                     });
                 }
-                
+
                 const convData = conversationMap.get(partner);
                 convData.messages.push(conv);
-                
+
                 // Update unread count
                 if (conv.receiverUsername === currentUser && !conv.isRead) {
                     convData.unreadCount++;
                 }
-                
+
                 // Keep the latest message
                 if (new Date(conv.timestamp) > new Date(convData.lastMessage.timestamp)) {
                     convData.lastMessage = conv;
@@ -717,9 +725,9 @@
             sortedConversations.forEach(conv => {
                 const isActive = currentConversation === conv.partner;
                 const hasUnread = conv.unreadCount > 0;
-                
+
                 html += `
-                    <div class="conversation-item ${isActive ? 'active' : ''}" 
+                    <div class="conversation-item ${isActive ? 'active' : ''}"
                          onclick="selectConversation('${conv.partner}')">
                         <div class="conversation-header">
                             <span class="conversation-name ${hasUnread ? 'unread' : ''}">${conv.partner}</span>
@@ -732,20 +740,20 @@
                     </div>
                 `;
             });
-            
+
             conversationsList.innerHTML = html;
         }
 
         function selectConversation(partner) {
             chatPartner = partner;
             currentConversation = partner;
-            
+
             // Update UI
             document.getElementById('chatPartnerName').textContent = partner;
             document.getElementById('chatPartnerStatus').textContent = 'Active now';
             document.getElementById('messageInput').disabled = false;
             document.querySelector('.chat-input button').disabled = false;
-            
+
             // Show mark as read button if there are unread messages
             const unreadCount = getUnreadCountForPartner(partner);
             if (unreadCount > 0) {
@@ -754,58 +762,58 @@
             } else {
                 document.getElementById('markReadBtn').style.display = 'none';
             }
-            
+
             // Update active conversation in sidebar
             updateActiveConversation(partner);
-            
+
             // Load conversation using REST API instead of WebSocket
             loadConversationViaRest(partner);
-            
+
             // Mark conversation as read
             markConversationAsRead(partner);
         }
 
         function loadConversationViaRest(partner) {
             console.log('Loading conversation with', partner, 'via REST API');
-            
-            fetch(`http://localhost:8080/api/chat/conversation/${partner}`, {
+
+            fetch(`http://localhost:8888/api/chat/conversation/${partner}`, {
                 headers: {
                     'Authorization': 'Bearer ' + authToken
                 }
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('REST API response for conversation:', data);
-                if (data.success) {
-                    displayConversation(data.data);
-                } else {
-                    console.error('Failed to load conversation:', data.message);
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('REST API response for conversation:', data);
+                    if (data.success) {
+                        displayConversation(data.data);
+                    } else {
+                        console.error('Failed to load conversation:', data.message);
+                        // Show error message in chat area
+                        const chatMessages = document.getElementById('chatMessages');
+                        chatMessages.innerHTML = '<div class="status-message">Error loading conversation: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading conversation via REST:', error);
                     // Show error message in chat area
                     const chatMessages = document.getElementById('chatMessages');
-                    chatMessages.innerHTML = '<div class="status-message">Error loading conversation: ' + data.message + '</div>';
-                }
-            })
-            .catch(error => {
-                console.error('Error loading conversation via REST:', error);
-                // Show error message in chat area
-                const chatMessages = document.getElementById('chatMessages');
-                chatMessages.innerHTML = '<div class="status-message">Failed to load conversation. Please try again.</div>';
-            });
+                    chatMessages.innerHTML = '<div class="status-message">Failed to load conversation. Please try again.</div>';
+                });
         }
 
         function getUnreadCountForPartner(partner) {
             // Find the conversation in our local data
             const conversation = conversations.find(conv => {
-                const convPartner = conv.senderUsername === currentUser ? 
+                const convPartner = conv.senderUsername === currentUser ?
                     conv.receiverUsername : conv.senderUsername;
                 return convPartner === partner;
             });
-            
+
             if (conversation && conversation.receiverUsername === currentUser && !conversation.isRead) {
                 return 1; // For simplicity, just return 1 if unread
             }
@@ -815,31 +823,31 @@
         function markConversationAsRead(partner) {
             if (currentUser) {
                 // Use REST API for marking conversation as read
-                fetch(`http://localhost:8080/api/chat/conversation/${partner}/read`, {
+                fetch(`http://localhost:8888/api/chat/conversation/${partner}/read`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': 'Bearer ' + authToken,
                         'Content-Type': 'application/json'
                     }
                 })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        console.log('Conversation marked as read successfully');
-                        // Refresh conversations to update unread counts
-                        loadConversations();
-                    } else {
-                        console.error('Failed to mark conversation as read:', data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error marking conversation as read:', error);
-                });
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Conversation marked as read successfully');
+                            // Refresh conversations to update unread counts
+                            loadConversations();
+                        } else {
+                            console.error('Failed to mark conversation as read:', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error marking conversation as read:', error);
+                    });
             }
         }
 
@@ -848,7 +856,7 @@
             document.querySelectorAll('.conversation-item').forEach(item => {
                 item.classList.remove('active');
             });
-            
+
             // Add active class to selected conversation
             const conversationItems = document.querySelectorAll('.conversation-item');
             conversationItems.forEach(item => {
@@ -861,13 +869,13 @@
         function sendMessage() {
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value.trim();
-            
+
             if (message && chatPartner && stompClient) {
                 const request = {
                     receiverUsername: chatPartner,
                     message: message
                 };
-                
+
                 stompClient.send("/app/chat/send", {}, JSON.stringify(request));
                 messageInput.value = '';
             }
@@ -879,7 +887,7 @@
             console.log('Type:', data.type);
             console.log('Data content:', data.data);
             console.log('Data length:', data.data ? data.data.length : 'undefined');
-            
+
             if (data.type === 'CHAT_CONVERSATIONS_INITIAL') {
                 console.log('Loading initial conversations...');
                 displayConversations(data.data);
@@ -888,16 +896,17 @@
                 console.log('Conversation data:', data.data);
                 displayConversation(data.data);
             } else if (data.type === 'CHAT_MESSAGE') {
+                console.log("my message :", data)
                 // Only display if this is a message from someone else
                 if (data.data.senderUsername !== currentUser) {
                     displayMessage(data.data);
-                    
+
                     // Play notification sound if not in current conversation
                     if (currentConversation !== data.data.senderUsername) {
                         playNotificationSound();
                         showNewMessageNotification(data.data.senderUsername, data.data.message);
                     }
-                    
+
                     // Refresh conversations to show latest message
                     loadConversations();
                 }
@@ -919,16 +928,16 @@
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
+
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            
+
             oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
             oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-            
+
             gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-            
+
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.2);
         }
@@ -946,12 +955,12 @@
         function displayConversation(messages) {
             const chatMessages = document.getElementById('chatMessages');
             chatMessages.innerHTML = '';
-            
+
             if (messages.length === 0) {
                 chatMessages.innerHTML = '<div class="status-message">No messages yet. Start the conversation!</div>';
                 return;
             }
-            
+
             messages.forEach(message => {
                 displayMessage(message);
             });
@@ -960,11 +969,11 @@
         function filterConversations(searchTerm) {
             const conversationItems = document.querySelectorAll('.conversation-item');
             const searchLower = searchTerm.toLowerCase();
-            
+
             conversationItems.forEach(item => {
                 const partnerName = item.querySelector('.conversation-name').textContent.toLowerCase();
                 const messagePreview = item.querySelector('.conversation-preview').textContent.toLowerCase();
-                
+
                 if (partnerName.includes(searchLower) || messagePreview.includes(searchLower)) {
                     item.style.display = 'block';
                 } else {
@@ -977,7 +986,7 @@
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
             const isSent = message.senderUsername === currentUser;
-            
+
             messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
             messageDiv.innerHTML = `
                 <div class="message-bubble">
@@ -986,7 +995,7 @@
                 </div>
                 <div class="message-time">${formatTime(message.timestamp)}</div>
             `;
-            
+
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -995,7 +1004,7 @@
             const date = new Date(timestamp);
             const now = new Date();
             const diffInHours = (now - date) / (1000 * 60 * 60);
-            
+
             if (diffInHours < 24) {
                 return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             } else if (diffInHours < 48) {
@@ -1015,44 +1024,44 @@
         function markCurrentConversationAsRead() {
             if (currentConversation) {
                 // Use REST API for marking current conversation as read
-                fetch(`http://localhost:8080/api/chat/conversation/${currentConversation}/read`, {
+                fetch(`http://localhost:8888/api/chat/conversation/${currentConversation}/read`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': 'Bearer ' + authToken,
                         'Content-Type': 'application/json'
                     }
                 })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        console.log('Current conversation marked as read successfully');
-                        document.getElementById('markReadBtn').style.display = 'none';
-                        // Refresh conversations to update unread counts
-                        loadConversations();
-                    } else {
-                        console.error('Failed to mark current conversation as read:', data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error marking current conversation as read:', error);
-                });
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Current conversation marked as read successfully');
+                            document.getElementById('markReadBtn').style.display = 'none';
+                            // Refresh conversations to update unread counts
+                            loadConversations();
+                        } else {
+                            console.error('Failed to mark current conversation as read:', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error marking current conversation as read:', error);
+                    });
             }
         }
 
         // Handle Enter key in message input
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        document.getElementById('messageInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
 
         // Handle Enter key in password field
-        document.getElementById('password').addEventListener('keypress', function(e) {
+        document.getElementById('password').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 login();
             }
@@ -1068,39 +1077,39 @@
                 console.log('Not logged in yet');
                 return;
             }
-            
+
             console.log('=== DEBUG REST API ===');
             console.log('Current user:', currentUser);
             console.log('Auth token:', authToken ? 'Present' : 'Missing');
-            
+
             // Test conversations endpoint
-            fetch('http://localhost:8080/api/chat/conversations', {
+            fetch('http://localhost:8888/api/chat/conversations', {
                 headers: {
                     'Authorization': 'Bearer ' + authToken
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Conversations API response:', data);
-            })
-            .catch(error => {
-                console.error('Conversations API error:', error);
-            });
-            
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Conversations API response:', data);
+                })
+                .catch(error => {
+                    console.error('Conversations API error:', error);
+                });
+
             // Test specific conversation endpoint
             if (currentConversation) {
-                fetch(`http://localhost:8080/api/chat/conversation/${currentConversation}`, {
+                fetch(`http://localhost:8888/api/chat/conversation/${currentConversation}`, {
                     headers: {
                         'Authorization': 'Bearer ' + authToken
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Specific conversation API response:', data);
-                })
-                .catch(error => {
-                    console.error('Specific conversation API error:', error);
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Specific conversation API response:', data);
+                    })
+                    .catch(error => {
+                        console.error('Specific conversation API error:', error);
+                    });
             }
         }
 
@@ -1108,4 +1117,5 @@
         window.debugRestAPI = debugRestAPI;
     </script>
 </body>
+
 </html>

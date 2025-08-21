@@ -1,12 +1,14 @@
 # Demo WebSocket Application
 
-A comprehensive Spring Boot WebSocket application with real-time features including user management, exchange rates, and promotions. Built with Spring Boot 3.2.5, WebSocket + STOMP, Kafka, PostgreSQL, and JWT authentication.
+A comprehensive Spring Boot WebSocket application with real-time features including user management, exchange rates, notification, chat message and promotions. Built with Spring Boot 3.2.5, WebSocket + STOMP, Kafka, PostgreSQL, and JWT authentication.
 
 ## Features
 
 - **User Management**: Registration, login, and profile management with JWT authentication
 - **Real-time Exchange Rates**: Global exchange rates with real-time updates via WebSocket
 - **User-specific Promotions**: Individual promotions with real-time updates
+- **User-specific Notification**: Individual notifications with real-time updates
+- **Private-Chat**: One-to-One chat messages with real-time updates
 - **WebSocket + STOMP**: Real-time bidirectional communication
 - **Kafka Integration**: Message streaming for real-time updates
 - **PostgreSQL Database**: Persistent data storage with Flyway migrations
@@ -247,4 +249,4 @@ tail -f logs/application.log
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under Sokhen-Smos

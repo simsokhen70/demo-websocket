@@ -7,6 +7,7 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    open-in-view: false
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -15,8 +16,8 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP}
     properties:
-      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
-      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM}
       sasl.jaas.config: ${KAFKA_SASL_JAAS}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
