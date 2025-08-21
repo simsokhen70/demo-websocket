@@ -1,10 +1,8 @@
 package org.example.demows.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+
+import org.example.demows.dto.ChatMessageDto;
 import org.example.demows.dto.ExchangeRateDto;
 import org.example.demows.dto.NotificationDto;
 import org.example.demows.dto.PromotionDto;
@@ -12,7 +10,13 @@ import org.example.demows.dto.WebSocketMessage;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import org.example.demows.dto.ChatMessageDto;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Kafka consumer service for handling real-time updates
@@ -25,11 +29,32 @@ public class KafkaConsumerService {
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
+    // @KafkaListener(topics = "exchange-rates", groupId = "demo-ws-group")
+    // public void consumeExchangeRateUpdates(String message) {
+    // try {
+    // WebSocketMessage<ExchangeRateDto> webSocketMessage =
+    // objectMapper.readValue(message,
+    // objectMapper.getTypeFactory().constructParametricType(WebSocketMessage.class,
+    // ExchangeRateDto.class));
+
+    // log.debug("Received exchange rate update from Kafka: {}", message);
+
+    // // Broadcast to all WebSocket subscribers
+    // messagingTemplate.convertAndSend("/topic/exchange-rates", webSocketMessage);
+
+    // } catch (JsonProcessingException e) {
+    // log.error("Error processing exchange rate message from Kafka", e);
+    // }
+    // }
+
     @KafkaListener(topics = "exchange-rates", groupId = "demo-ws-group")
     public void consumeExchangeRateUpdates(String message) {
         try {
-            WebSocketMessage<ExchangeRateDto> webSocketMessage = objectMapper.readValue(message,
-                    objectMapper.getTypeFactory().constructParametricType(WebSocketMessage.class, ExchangeRateDto.class));
+            WebSocketMessage<List<ExchangeRateDto>> webSocketMessage = objectMapper.readValue(
+                    message,
+                    objectMapper.getTypeFactory().constructParametricType(
+                            WebSocketMessage.class,
+                            objectMapper.getTypeFactory().constructCollectionType(List.class, ExchangeRateDto.class)));
 
             log.debug("Received exchange rate update from Kafka: {}", message);
 
@@ -64,7 +89,8 @@ public class KafkaConsumerService {
             log.debug("Received notification message: {}", message);
 
             WebSocketMessage<NotificationDto> notificationMessage = objectMapper
-                    .readValue(message, new TypeReference<WebSocketMessage<NotificationDto>>() {});
+                    .readValue(message, new TypeReference<WebSocketMessage<NotificationDto>>() {
+                    });
 
             // Extract username from notification data
             NotificationDto notification = notificationMessage.getData();
@@ -87,20 +113,27 @@ public class KafkaConsumerService {
             // Note: ChatServiceImpl already sends messages directly to WebSocket
             // This consumer is mainly for monitoring and future features
             // We don't need to forward the message again to avoid duplicates
-            
+
             WebSocketMessage<ChatMessageDto> chatMessage = objectMapper
-                    .readValue(message, new TypeReference<WebSocketMessage<ChatMessageDto>>() {});
+                    .readValue(message, new TypeReference<WebSocketMessage<ChatMessageDto>>() {
+                    });
 
             ChatMessageDto chatData = chatMessage.getData();
-            
-            log.debug("Chat message processed from Kafka: {} -> {}", 
-                chatData.getSenderUsername(), chatData.getReceiverUsername());
-            
+
+            log.debug("Chat message processed from Kafka: {} -> {}",
+                    chatData.getSenderUsername(), chatData.getReceiverUsername());
+
             // No need to send to WebSocket again - ChatServiceImpl handles this
             // This prevents duplicate messages
-            
+
         } catch (Exception e) {
             log.error("Error processing chat message from Kafka", e);
         }
+    }
+
+    @KafkaListener(topics = "postgres.dbserver1.public.promotions", groupId = "ws-group")
+    public void consumePromotion(String message) {
+        log.info("Received from Debezium: {}", message);
+        // messagingTemplate.convertAndSend("/topic/promotions", message);
     }
 }
