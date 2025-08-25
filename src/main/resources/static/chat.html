@@ -573,7 +573,7 @@
             setLoading(true);
             updateLoginStatus('Logging in...', '');
 
-            fetch('http://localhost:8888/api/auth/login', {
+            fetch('http://localhost:8080/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -649,7 +649,7 @@
         }
 
         function connectWebSocket() {
-            const socket = new SockJS('http://localhost:8888/ws');
+            const socket = new SockJS('http://localhost:8080/ws');
             stompClient = Stomp.over(socket);
 
             const headers = {
@@ -776,7 +776,7 @@
         function loadConversationViaRest(partner) {
             console.log('Loading conversation with', partner, 'via REST API');
 
-            fetch(`http://localhost:8888/api/chat/conversation/${partner}`, {
+            fetch(`http://localhost:8080/api/chat/conversation/${partner}`, {
                 headers: {
                     'Authorization': 'Bearer ' + authToken
                 }
@@ -823,7 +823,7 @@
         function markConversationAsRead(partner) {
             if (currentUser) {
                 // Use REST API for marking conversation as read
-                fetch(`http://localhost:8888/api/chat/conversation/${partner}/read`, {
+                fetch(`http://localhost:8080/api/chat/conversation/${partner}/read`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': 'Bearer ' + authToken,
@@ -1024,7 +1024,7 @@
         function markCurrentConversationAsRead() {
             if (currentConversation) {
                 // Use REST API for marking current conversation as read
-                fetch(`http://localhost:8888/api/chat/conversation/${currentConversation}/read`, {
+                fetch(`http://localhost:8080/api/chat/conversation/${currentConversation}/read`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': 'Bearer ' + authToken,
@@ -1083,7 +1083,7 @@
             console.log('Auth token:', authToken ? 'Present' : 'Missing');
 
             // Test conversations endpoint
-            fetch('http://localhost:8888/api/chat/conversations', {
+            fetch('http://localhost:8080/api/chat/conversations', {
                 headers: {
                     'Authorization': 'Bearer ' + authToken
                 }
@@ -1098,7 +1098,7 @@
 
             // Test specific conversation endpoint
             if (currentConversation) {
-                fetch(`http://localhost:8888/api/chat/conversation/${currentConversation}`, {
+                fetch(`http://localhost:8080/api/chat/conversation/${currentConversation}`, {
                     headers: {
                         'Authorization': 'Bearer ' + authToken
                     }

@@ -60,6 +60,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return message;
     }
 
+
     private String extractToken(StompHeaderAccessor accessor) {
         String authHeader = accessor.getFirstNativeHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {

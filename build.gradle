@@ -42,6 +42,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
 
+    implementation 'org.springframework.session:spring-session-core'
+
+
     // Database
     //implementation 'com.h2database:h2'
     runtimeOnly("org.postgresql:postgresql")
