@@ -32,10 +32,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
 
 
-        // WebSocket + SockJS
+        // WebSocket + SockJS ( for native like swift ios)
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns(allowedOrigins.split(","));
 
+        // enable for sockjs
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns   (allowedOrigins.split(","))
                 .withSockJS();
