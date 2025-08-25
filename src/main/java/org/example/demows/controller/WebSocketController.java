@@ -48,7 +48,7 @@ public class WebSocketController {
                 .build();
     }
 
-    @MessageMapping("/promotions/subscribe")
+    @MessageMapping("/app/promotions/subscribe")
     @SendToUser("/queue/promotions")
     public WebSocketMessage<?> subscribeToPromotions(SimpMessageHeaderAccessor headerAccessor) {
         String sessionId = headerAccessor.getSessionId();
