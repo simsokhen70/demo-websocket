@@ -1,5 +1,6 @@
 package org.example.demows.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,5 +22,6 @@ public class ExchangeRateDto {
     private String fromCurrency;
     private String toCurrency;
     private BigDecimal rate;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastUpdated;
 }

@@ -65,4 +65,14 @@ public class KafkaConfig {
     public KafkaTemplate<String, String> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
+
+/*    @Bean
+    DefaultErrorHandler errorHandler(KafkaTemplate<Object, Object> template) {
+        var recoverer = new DeadLetterPublishingRecoverer(
+                template,
+                (r, e) -> new TopicPartition(r.topic() + ".DLT", r.partition())
+        );
+        return new DefaultErrorHandler(recoverer, new FixedBackOff(1000L, 3L));
+    }*/
+
 }
