@@ -14,7 +14,7 @@ public class JacksonConfig {
     @Primary
     public ObjectMapper objectMapper() {
         return new ObjectMapper()
-                .registerModule(new JavaTimeModule())  // support Java 8 Date/Time
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // use ISO-8601 instead of timestamps
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // use ISO-8601 instead when see timestamps
     }
 }
